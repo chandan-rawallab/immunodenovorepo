@@ -1,0 +1,11 @@
+data/
+bin/
+logs/
+results/
+temp/
+__pycache__/
+*.raw
+*.mgf
+*.pth
+*.txt
+*.tsv

@@ -1,0 +1,590 @@
+[
+    {
+        "fileName": "20160823_QEh1_LC2_HuPa_SA_HLApI_CM647_2_MG_1.raw",
+        "fileSizeBytes": 1032456283,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160823_QEh1_LC2_HuPa_SA_HLApI_CM647_2_MG_1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160823_QEh1_LC2_HuPa_SA_HLApI_CM647_2_MG_1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160513_TIL3_R2.raw",
+        "fileSizeBytes": 1834663928,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160513_TIL3_R2.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160513_TIL3_R2.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160517_GD149-4_R1.raw",
+        "fileSizeBytes": 1811817412,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160517_GD149-4_R1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160517_GD149-4_R1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160823_QEh1_LC2_HuPa_SA_HLApI_RA957_1_MG_1.raw",
+        "fileSizeBytes": 931622273,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160823_QEh1_LC2_HuPa_SA_HLApI_RA957_1_MG_1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160823_QEh1_LC2_HuPa_SA_HLApI_RA957_1_MG_1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160517_GD149-2_R1.raw",
+        "fileSizeBytes": 1730499400,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160517_GD149-2_R1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160517_GD149-2_R1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160730_QEh1_LC1_HuPa_SA_Apher-1_Amino_1.raw",
+        "fileSizeBytes": 874532963,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160730_QEh1_LC1_HuPa_SA_Apher-1_Amino_1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160730_QEh1_LC1_HuPa_SA_Apher-1_Amino_1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160730_QEh1_LC1_HuPa_SA_Apher-6_pro-A_1.raw",
+        "fileSizeBytes": 842727130,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160730_QEh1_LC1_HuPa_SA_Apher-6_pro-A_1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160730_QEh1_LC1_HuPa_SA_Apher-6_pro-A_1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160823_QEh1_LC2_HuPa_SA_HLApI_CM647_2_NG_1.raw",
+        "fileSizeBytes": 930404597,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160823_QEh1_LC2_HuPa_SA_HLApI_CM647_2_NG_1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160823_QEh1_LC2_HuPa_SA_HLApI_CM647_2_NG_1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160513_TIL1_R2.raw",
+        "fileSizeBytes": 1821242926,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160513_TIL1_R2.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160513_TIL1_R2.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160517_GD149-5_R1.raw",
+        "fileSizeBytes": 1890214238,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160517_GD149-5_R1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160517_GD149-5_R1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160517_DC2W6_R1.raw",
+        "fileSizeBytes": 1746251114,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160517_DC2W6_R1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160517_DC2W6_R1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160902_QEh1_LC2_CHC_SA_HLApI_MD155_2.raw",
+        "fileSizeBytes": 778432945,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160902_QEh1_LC2_CHC_SA_HLApI_MD155_2.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160902_QEh1_LC2_CHC_SA_HLApI_MD155_2.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160517_GD149-3_R1.raw",
+        "fileSizeBytes": 1712378374,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160517_GD149-3_R1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160517_GD149-3_R1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160823_QEh1_LC2_HuPa_SA_HLApI_RA957_2_MG_1.raw",
+        "fileSizeBytes": 1037999543,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160823_QEh1_LC2_HuPa_SA_HLApI_RA957_2_MG_1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160823_QEh1_LC2_HuPa_SA_HLApI_RA957_2_MG_1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160902_QEh1_LC2_CHC_SA_HLApI_pooledTIL3_2.raw",
+        "fileSizeBytes": 1032630923,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160902_QEh1_LC2_CHC_SA_HLApI_pooledTIL3_2.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160902_QEh1_LC2_CHC_SA_HLApI_pooledTIL3_2.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160902_QEh1_LC2_CHC_SA_HLApI_TIL3_1.raw",
+        "fileSizeBytes": 1118083614,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160902_QEh1_LC2_CHC_SA_HLApI_TIL3_1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160902_QEh1_LC2_CHC_SA_HLApI_TIL3_1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160513_TIL2_R1.raw",
+        "fileSizeBytes": 1832843632,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160513_TIL2_R1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160513_TIL2_R1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160902_QEh1_LC2_CHC_SA_HLApI_TIL3_2.raw",
+        "fileSizeBytes": 1315761608,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160902_QEh1_LC2_CHC_SA_HLApI_TIL3_2.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160902_QEh1_LC2_CHC_SA_HLApI_TIL3_2.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160513_TIL4_R1.raw",
+        "fileSizeBytes": 1807700676,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160513_TIL4_R1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160513_TIL4_R1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160823_QEh1_LC2_HuPa_SA_HLApI_RA957_1_NG_1.raw",
+        "fileSizeBytes": 861497005,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160823_QEh1_LC2_HuPa_SA_HLApI_RA957_1_NG_1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160823_QEh1_LC2_HuPa_SA_HLApI_RA957_1_NG_1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160517_DC5W6_R1.raw",
+        "fileSizeBytes": 1788843950,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160517_DC5W6_R1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160517_DC5W6_R1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "Searchengineresults.zip",
+        "fileSizeBytes": 122162486,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/Searchengineresults.zip"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/Searchengineresults.zip"
+            }
+        ]
+    },
+    {
+        "fileName": "20160617_PD42_w6_S3_R1.raw",
+        "fileSizeBytes": 1561550822,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160617_PD42_w6_S3_R1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160617_PD42_w6_S3_R1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160617_PD42_w6_S1_R1.raw",
+        "fileSizeBytes": 1541805878,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160617_PD42_w6_S1_R1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160617_PD42_w6_S1_R1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160902_QEh1_LC2_CHC_SA_HLApI_MD155_3.raw",
+        "fileSizeBytes": 930822278,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160902_QEh1_LC2_CHC_SA_HLApI_MD155_3.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160902_QEh1_LC2_CHC_SA_HLApI_MD155_3.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160823_QEh1_LC2_HuPa_SA_HLApI_CM647_3_NG_1.raw",
+        "fileSizeBytes": 1097203391,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160823_QEh1_LC2_HuPa_SA_HLApI_CM647_3_NG_1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160823_QEh1_LC2_HuPa_SA_HLApI_CM647_3_NG_1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160513_TIL1_R1.raw",
+        "fileSizeBytes": 1841641940,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160513_TIL1_R1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160513_TIL1_R1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160902_QEh1_LC2_CHC_SA_HLApI_pooledTIL3_1.raw",
+        "fileSizeBytes": 1169812535,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160902_QEh1_LC2_CHC_SA_HLApI_pooledTIL3_1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160902_QEh1_LC2_CHC_SA_HLApI_pooledTIL3_1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160513_TIL4_R2.raw",
+        "fileSizeBytes": 1814071292,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160513_TIL4_R2.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160513_TIL4_R2.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160902_QEh1_LC2_CHC_SA_HLApI_pooledTIL3_3.raw",
+        "fileSizeBytes": 1074969928,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160902_QEh1_LC2_CHC_SA_HLApI_pooledTIL3_3.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160902_QEh1_LC2_CHC_SA_HLApI_pooledTIL3_3.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160517_DC4W6_R1.raw",
+        "fileSizeBytes": 1774888860,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160517_DC4W6_R1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160517_DC4W6_R1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160517_GD149-1_R1.raw",
+        "fileSizeBytes": 1732459586,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160517_GD149-1_R1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160517_GD149-1_R1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160730_QEh1_LC1_HuPa_SA_Apher-1_pro-A_1.raw",
+        "fileSizeBytes": 995261465,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160730_QEh1_LC1_HuPa_SA_Apher-1_pro-A_1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160730_QEh1_LC1_HuPa_SA_Apher-1_pro-A_1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160513_TIL2_R2.raw",
+        "fileSizeBytes": 1777143194,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160513_TIL2_R2.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160513_TIL2_R2.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160902_QEh1_LC2_CHC_SA_HLApI_TIL3_3.raw",
+        "fileSizeBytes": 1164057863,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160902_QEh1_LC2_CHC_SA_HLApI_TIL3_3.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160902_QEh1_LC2_CHC_SA_HLApI_TIL3_3.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160513_TIL3_R1.raw",
+        "fileSizeBytes": 1788641984,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160513_TIL3_R1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160513_TIL3_R1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160823_QEh1_LC2_HuPa_SA_HLApI_CM647_3_MG_1.raw",
+        "fileSizeBytes": 1172640746,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160823_QEh1_LC2_HuPa_SA_HLApI_CM647_3_MG_1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160823_QEh1_LC2_HuPa_SA_HLApI_CM647_3_MG_1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160902_QEh1_LC2_CHC_SA_HLApI_MD155_1.raw",
+        "fileSizeBytes": 975998085,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160902_QEh1_LC2_CHC_SA_HLApI_MD155_1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160902_QEh1_LC2_CHC_SA_HLApI_MD155_1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160517_DC1W6_R1.raw",
+        "fileSizeBytes": 1742381618,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160517_DC1W6_R1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160517_DC1W6_R1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160730_QEh1_LC1_HuPa_SA_Apher-6_Amino_1.raw",
+        "fileSizeBytes": 848174616,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160730_QEh1_LC1_HuPa_SA_Apher-6_Amino_1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160730_QEh1_LC1_HuPa_SA_Apher-6_Amino_1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160517_DC3W6_R1.raw",
+        "fileSizeBytes": 1754957900,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160517_DC3W6_R1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160517_DC3W6_R1.raw"
+            }
+        ]
+    },
+    {
+        "fileName": "20160823_QEh1_LC2_HuPa_SA_HLApI_RA957_2_NG_1.raw",
+        "fileSizeBytes": 982915110,
+        "publicDownloadLinks": [
+            {
+                "method": "FTP",
+                "value": "ftp://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160823_QEh1_LC2_HuPa_SA_HLApI_RA957_2_NG_1.raw"
+            },
+            {
+                "method": "HTTPS",
+                "value": "https://ftp.pride.ebi.ac.uk/pride/data/archive/2017/08/PXD005231/20160823_QEh1_LC2_HuPa_SA_HLApI_RA957_2_NG_1.raw"
+            }
+        ]
+    }
+]

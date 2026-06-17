@@ -8,7 +8,7 @@ import xml.etree.ElementTree as ET
 # =========================================================================
 # Get the directory where THIS script is located
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(SCRIPT_DIR)
+PROJECT_ROOT = os.path.dirname(os.path.dirname(SCRIPT_DIR))
 
 # Path definitions relative to Project Root
 RAW_DIR = os.path.join(PROJECT_ROOT, "data", "raw")

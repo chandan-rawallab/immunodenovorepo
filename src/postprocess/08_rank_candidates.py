@@ -6,8 +6,18 @@ import pandas as pd
 from pathlib import Path
 import subprocess
 import tempfile
-import csv
 import shutil
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+WORKSPACE_ROOT = SCRIPT_DIR.parent.parent
+PATIENT_MATCHED_RNA_SOURCES = {
+    "real_patient_matched",
+    "patient_matched",
+    "provided_patient_matched",
+    "clinical_rna",
+    "matched_rna",
+}
+NON_BIOLOGICAL_RNA_MARKERS = ("mock", "debug", "surrogate", "inferred", "missing", "provided_override")
 
 def normalize_hla(value: str) -> str:
     """Normalize HLA allele to MHCflurry format (e.g., HLA-A*02:01)."""
@@ -31,10 +41,14 @@ def run_mhcflurry(peptides, alleles, output_path):
     """Run MHCflurry prediction for a list of peptides and alleles."""
     predictor = shutil.which("mhcflurry-predict")
     if not predictor:
+        local_predictor = WORKSPACE_ROOT / ".venv" / "bin" / "mhcflurry-predict"
+        if local_predictor.exists():
+            predictor = str(local_predictor)
+    if not predictor:
         print("Warning: mhcflurry-predict not found. Skipping binding prediction.")
         return False
     
-    with tempfile.NamedTemporaryDirectory() as tmpdir:
+    with tempfile.TemporaryDirectory() as tmpdir:
         input_csv = Path(tmpdir) / "input.csv"
         with open(input_csv, "w") as f:
             f.write("allele,peptide\n")
@@ -49,6 +63,85 @@ def run_mhcflurry(peptides, alleles, output_path):
             print(f"Error running MHCflurry: {e.stderr.decode()}")
             return False
 
+def normalize_protein_id(value: object) -> str:
+    """Normalize accession-like IDs for expression lookup."""
+    text = str(value or "").strip()
+    if not text or text.lower() == "nan":
+        return ""
+    # UniProt isoforms often appear as Q16625-2 while expression may use Q16625.
+    return text.split("-")[0]
+
+def source_protein_ids(value: object) -> list[str]:
+    """Split semicolon-delimited source protein annotations into lookup IDs."""
+    text = str(value or "").strip()
+    if not text or text.lower() == "nan":
+        return []
+    ids = []
+    for part in text.split(";"):
+        norm = normalize_protein_id(part)
+        if norm and norm not in ids:
+            ids.append(norm)
+    return ids
+
+def expression_for_source(source_value: object, rna_path: object, expression_lookup: dict[tuple[str, str], float]) -> float:
+    """Return the max TPM among all source protein IDs for this patient RNA file."""
+    path = str(rna_path or "")
+    values = [
+        expression_lookup[(path, protein_id)]
+        for protein_id in source_protein_ids(source_value)
+        if (path, protein_id) in expression_lookup
+    ]
+    return max(values) if values else 0.0
+
+def collapse_duplicate_candidates(df: pd.DataFrame) -> pd.DataFrame:
+    """Collapse repeated sample+peptide rows while keeping the strongest evidence row."""
+    if not {"sample_id", "peptide"}.issubset(df.columns):
+        return df
+    if not df.duplicated(["sample_id", "peptide"]).any():
+        return df
+
+    collapsed = []
+    sort_cols = [c for c in ["binding_rank", "score"] if c in df.columns]
+    for _, group in df.groupby(["sample_id", "peptide"], sort=False):
+        ranked = group.copy()
+        if "binding_rank" in ranked.columns:
+            ranked["_binding_sort"] = pd.to_numeric(ranked["binding_rank"], errors="coerce").fillna(float("inf"))
+            ranked = ranked.sort_values("_binding_sort", ascending=True)
+        elif "score" in ranked.columns:
+            ranked["_score_sort"] = pd.to_numeric(ranked["score"], errors="coerce").fillna(float("-inf"))
+            ranked = ranked.sort_values("_score_sort", ascending=False)
+        row = ranked.iloc[0].drop(labels=[c for c in ["_binding_sort", "_score_sort"] if c in ranked.columns]).copy()
+
+        if "psm_count" in group.columns:
+            row["psm_count"] = pd.to_numeric(group["psm_count"], errors="coerce").max()
+        if "expression_tpm" in group.columns:
+            row["expression_tpm"] = pd.to_numeric(group["expression_tpm"], errors="coerce").fillna(0.0).max()
+        if "spectrum_id" in group.columns:
+            spectra = [str(x) for x in group["spectrum_id"].dropna().unique()]
+            row["spectrum_id"] = ";".join(spectra[:25])
+        collapsed.append(row)
+
+    return pd.DataFrame(collapsed).reset_index(drop=True)
+
+def normalize_rna_source(value: object) -> str:
+    """Normalize manifest RNA source labels for evidence gating."""
+    text = str(value or "").strip().lower()
+    if not text or text == "nan":
+        return "missing"
+    return text
+
+def expression_evidence_status(value: object) -> str:
+    """Classify whether RNA expression can support biological evidence classes."""
+    source = normalize_rna_source(value)
+    if source in PATIENT_MATCHED_RNA_SOURCES:
+        return "patient_matched"
+    if any(marker in source for marker in NON_BIOLOGICAL_RNA_MARKERS):
+        return "debug_or_non_patient_matched"
+    return "unverified"
+
+def expression_can_support_biology(value: object) -> bool:
+    return expression_evidence_status(value) == "patient_matched"
+
 def main():
     parser = argparse.ArgumentParser(description="Rank neoantigen candidates.")
     parser.add_argument("--input", type=Path, required=True, help="Path to filtered_neoantigens.tsv")
@@ -56,6 +149,8 @@ def main():
     parser.add_argument("--output", type=Path, required=True, help="Output ranked TSV")
     parser.add_argument("--binding_rank_cutoff", type=float, default=2.0)
     parser.add_argument("--tpm_cutoff", type=float, default=1.0)
+    parser.add_argument("--keep_duplicate_rows", action="store_true",
+                        help="Keep repeated sample+peptide rows instead of collapsing them before evidence classification.")
     
     args = parser.parse_args()
     
@@ -88,14 +183,28 @@ def main():
             continue
             
         peptides = group['peptide'].unique().tolist()
-        with tempfile.NamedTemporaryDirectory() as tmpdir:
+        with tempfile.TemporaryDirectory() as tmpdir:
             out_csv = Path(tmpdir) / "mhcflurry_out.csv"
             if run_mhcflurry(peptides, alleles, out_csv):
                 mhc_df = pd.read_csv(out_csv)
                 # Pick best allele per peptide
-                best_mhc = mhc_df.sort_values("presentation_percentile").groupby("peptide").first().reset_index()
-                merged = group.merge(best_mhc[['peptide', 'allele', 'presentation_percentile']], on='peptide', how='left')
-                merged.rename(columns={'allele': 'best_hla', 'presentation_percentile': 'binding_rank'}, inplace=True)
+                score_candidates = [
+                    'mhcflurry_presentation_percentile',
+                    'presentation_percentile',
+                    'mhcflurry_affinity_percentile',
+                    'affinity_percentile',
+                ]
+                score_col = next((col for col in score_candidates if col in mhc_df.columns), None)
+                if score_col is None:
+                    print(f"Warning: MHCflurry output missing supported score columns: {score_candidates}")
+                    group_copy = group.copy()
+                    group_copy['best_hla'] = ""
+                    group_copy['binding_rank'] = None
+                    results.append(group_copy)
+                    continue
+                best_mhc = mhc_df.sort_values(score_col).groupby("peptide").first().reset_index()
+                merged = group.merge(best_mhc[['peptide', 'allele', score_col]], on='peptide', how='left')
+                merged.rename(columns={'allele': 'best_hla', score_col: 'binding_rank'}, inplace=True)
                 results.append(merged)
             else:
                 group_copy = group.copy()
@@ -109,16 +218,76 @@ def main():
         
     df_ranked = pd.concat(results)
     
-    # 3. Expression (Placeholder logic - linking by gene if available)
-    # Assuming expression data might be added later or is in a separate file
-    # For now, we'll set it to a default or check if 'expression_tpm' exists
+    # 3. Expression (linking by source_protein/gene if available)
     if 'expression_tpm' not in df_ranked.columns:
-        df_ranked['expression_tpm'] = 0.0 # Placeholder
+        df_ranked['expression_tpm'] = 0.0 # Default
         
+    if 'rna_expr_path' in manifest.columns:
+        # Build a manifest lookup: patient_id → rna_expr_path (one row per patient)
+        rna_cols = ['patient_id', 'rna_expr_path']
+        if 'rna_source' not in manifest.columns:
+            manifest['rna_source'] = 'missing'
+        rna_cols.append('rna_source')
+        patient_rna = manifest[rna_cols].drop_duplicates('patient_id').dropna(subset=['rna_expr_path'])
+        
+        # Pre-load all unique RNA-seq files
+        rna_dfs = {}
+        for _, meta_row in patient_rna.iterrows():
+            rna_path = meta_row['rna_expr_path']
+            if rna_path and Path(rna_path).exists():
+                try:
+                    rdf = pd.read_csv(rna_path, sep='\t')
+                    # Normalise: ensure we have gene and expression_tpm columns
+                    if 'gene' not in rdf.columns and 'protein_id' in rdf.columns:
+                        rdf = rdf.rename(columns={'protein_id': 'gene'})
+                    rdf = rdf[['gene', 'expression_tpm']].copy()
+                    rdf['gene'] = rdf['gene'].map(normalize_protein_id)
+                    rdf['expression_tpm'] = pd.to_numeric(rdf['expression_tpm'], errors='coerce').fillna(0.0)
+                    rna_dfs[rna_path] = rdf.groupby('gene', as_index=False)['expression_tpm'].max()
+                except Exception as e:
+                    print(f"Failed to load RNA-seq data from {rna_path}: {e}")
+        
+        if rna_dfs:
+            # Tag each candidate row with the rna_expr_path for its patient
+            df_ranked = df_ranked.merge(
+                patient_rna,
+                left_on='sample_id', right_on='patient_id', how='left'
+            )
+            source_col = 'source_protein' if 'source_protein' in df_ranked.columns else None
+            if source_col:
+                expression_lookup = {}
+                for path, rdf in rna_dfs.items():
+                    for _, expr_row in rdf.iterrows():
+                        gene = str(expr_row['gene'])
+                        if gene:
+                            expression_lookup[(str(path), gene)] = float(expr_row['expression_tpm'])
+
+                df_ranked['expression_tpm'] = df_ranked.apply(
+                    lambda row: expression_for_source(row[source_col], row.get('rna_expr_path', ''), expression_lookup),
+                    axis=1
+                )
+                df_ranked.rename(columns={'patient_id_x': 'patient_id'}, inplace=True)
+    if 'rna_source' not in df_ranked.columns:
+        if {'sample_id', 'patient_id', 'rna_source'}.issubset(manifest.columns):
+            patient_sources = manifest[['patient_id', 'rna_source']].drop_duplicates('patient_id')
+            df_ranked = df_ranked.merge(patient_sources, left_on='sample_id', right_on='patient_id', how='left')
+            df_ranked.rename(columns={'patient_id_x': 'patient_id'}, inplace=True)
+        else:
+            df_ranked['rna_source'] = 'missing'
+    df_ranked['rna_source'] = df_ranked['rna_source'].fillna('missing').map(normalize_rna_source)
+    df_ranked['expression_evidence_status'] = df_ranked['rna_source'].map(expression_evidence_status)
+    df_ranked['expression_supports_biology'] = df_ranked['rna_source'].map(expression_can_support_biology)
+
+    if not args.keep_duplicate_rows:
+        before = len(df_ranked)
+        df_ranked = collapse_duplicate_candidates(df_ranked)
+        if len(df_ranked) != before:
+            print(f"Collapsed duplicate sample+peptide rows: {before} -> {len(df_ranked)}")
+
     # 4. Evidence Class
     def assign_class(row):
         has_binding = pd.notnull(row['binding_rank']) and row['binding_rank'] <= args.binding_rank_cutoff
-        has_expression = row['expression_tpm'] >= args.tpm_cutoff
+        has_expression = row['expression_tpm'] >= args.tpm_cutoff and bool(row.get('expression_supports_biology', False))
         
         if row.get('mutation_type') == 'missense' and has_binding and has_expression:
             return 'A'
@@ -128,6 +297,10 @@ def main():
             return 'C'
             
     df_ranked['evidence_class'] = df_ranked.apply(assign_class, axis=1)
+    df_ranked['evidence_limitations'] = df_ranked.apply(
+        lambda row: "" if row['expression_supports_biology'] else f"RNA source `{row['rna_source']}` cannot support biological expression evidence",
+        axis=1,
+    )
     
     # Sort by class and then by rank/score
     class_order = {'A': 0, 'B': 1, 'C': 2}

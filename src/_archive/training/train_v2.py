@@ -59,7 +59,7 @@ def train_medium_lite():
         return
 
     # 3. Create Subset (1,000 samples)
-    subset_size = min(2000, total_len)
+    subset_size = min(1000, total_len)
     indices = np.random.choice(total_len, subset_size, replace=False)
     subset_dataset = Subset(full_dataset, indices)
     

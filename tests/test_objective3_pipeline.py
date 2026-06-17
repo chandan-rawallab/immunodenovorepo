@@ -1,4 +1,8 @@
+import sys
 from pathlib import Path
+
+ROOT = Path(__file__).parent.parent
+sys.path.insert(0, str(ROOT / "src" / "_archive"))
 
 from objective3.io_utils import read_table, write_tsv
 from objective3.pipeline import normalize_maxquant_psms, postprocess

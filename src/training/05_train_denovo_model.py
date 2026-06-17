@@ -20,14 +20,16 @@ def train_production(
     psm_file=None,
     checkpoint_dir=None,
     batch_size=32,
-    epochs=100,
+    epochs=150,
     lr=0.001,
     num_workers=4,
+    warmup_epochs=5,
 ):
     # 1. Configuration (Relative to Project Structure)
-    MGF_DIR = mgf_dir or os.path.join(PROJECT_ROOT, "data", "mgf")
-    PSM_FILE = psm_file or os.path.join(PROJECT_ROOT, "results", "immunopeptidome_psms.tsv")
-    CHECKPOINT_DIR = checkpoint_dir or os.path.join(PROJECT_ROOT, "results", "checkpoints")
+    WORKSPACE_ROOT = os.path.dirname(PROJECT_ROOT)
+    MGF_DIR = mgf_dir or os.path.join(WORKSPACE_ROOT, "data", "mgf")
+    PSM_FILE = psm_file or os.path.join(WORKSPACE_ROOT, "results", "immunopeptidome_psms.tsv")
+    CHECKPOINT_DIR = checkpoint_dir or os.path.join(WORKSPACE_ROOT, "results", "checkpoints")
     
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
     
@@ -48,10 +50,23 @@ def train_production(
         print(f"Check your .mgf files in {MGF_DIR} and PSM file {PSM_FILE}")
         return
 
-    # Split into Train and Validation (80/20)
-    train_size = int(0.8 * len(full_dataset))
-    val_size = len(full_dataset) - train_size
-    train_dataset, val_dataset = random_split(full_dataset, [train_size, val_size])
+    from sklearn.model_selection import train_test_split
+    from torch.utils.data import Subset
+
+    # Split into Train, Val, Test (70/15/15) stratified by peptide length
+    indices = list(range(len(full_dataset)))
+    lengths = full_dataset.psms['peptide'].str.len()
+    
+    train_idx, temp_idx = train_test_split(indices, test_size=0.3, stratify=lengths, random_state=42)
+    val_idx, test_idx = train_test_split(temp_idx, test_size=0.5, stratify=lengths.iloc[temp_idx], random_state=42)
+    
+    train_dataset = Subset(full_dataset, train_idx)
+    val_dataset = Subset(full_dataset, val_idx)
+    test_dataset = Subset(full_dataset, test_idx)
+    
+    # Save test set for locked evaluation
+    test_psms = full_dataset.psms.iloc[test_idx]
+    test_psms.to_csv(os.path.join(CHECKPOINT_DIR, "test_set_psms.tsv"), sep="\t", index=False)
 
     train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=num_workers)
     val_loader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=False)
@@ -59,8 +74,19 @@ def train_production(
     # 3. Initialize Model, Loss, Optimizer, Scheduler
     model = NeoepitopeSeq2Seq().to(DEVICE)
     criterion = nn.CrossEntropyLoss(ignore_index=0) 
-    optimizer = torch.optim.AdamW(model.parameters(), lr=LR)
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=20, gamma=0.5)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=1e-4)
+
+    # LR schedule: linear warmup for warmup_epochs, then StepLR decay every 20 epochs
+    WARMUP = warmup_epochs
+    def lr_lambda(epoch):
+        if epoch < WARMUP:
+            return float(epoch + 1) / WARMUP
+        steps_past_warmup = epoch - WARMUP
+        return 0.5 ** (steps_past_warmup // 20)
+    scheduler = torch.optim.lr_scheduler.LambdaLR(optimizer, lr_lambda)
+
+    train_size = len(train_dataset)
+    val_size = len(val_dataset)
 
     # 4. Training Loop
     print(f"Starting Training: {train_size} train samples, {val_size} val samples.")
@@ -83,6 +109,7 @@ def train_production(
             
             loss = criterion(outputs, sequences)
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)  # prevent exploding gradients
             optimizer.step()
             
             total_loss += loss.item()
@@ -153,17 +180,20 @@ if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(description="Train the Objective 3 CNN/LSTM model on production MGF + MaxQuant labels.")
     parser.add_argument("--mgf-dir", default="/home/amity/hla_data_mgf")
+    parser.add_argument("--psm-file", default=None,
+                        help="Path to immunopeptidome_psms.tsv. Defaults to results/immunopeptidome_psms.tsv relative to workspace root.")
     parser.add_argument("--results-dir", default=os.path.join(PROJECT_ROOT, "production_results"))
-    parser.add_argument("--checkpoint-dir", default=os.path.join(PROJECT_ROOT, "results", "checkpoints"))
+    # v2 dir keeps new-arch checkpoints separate from the old curated31 ones
+    parser.add_argument("--checkpoint-dir", default=os.path.join(PROJECT_ROOT, "results", "checkpoints_curated31_v2"))
     parser.add_argument("--batch-size", type=int, default=32)
-    parser.add_argument("--epochs", type=int, default=100)
-    parser.add_argument("--lr", type=float, default=0.001)
-    parser.add_argument("--num-workers", type=int, default=4)
+    parser.add_argument("--epochs", type=int, default=40)
+    parser.add_argument("--lr", type=float, default=0.0005)
+    parser.add_argument("--num-workers", type=int, default=0)
     args = parser.parse_args()
 
     train_production(
         mgf_dir=args.mgf_dir,
-        results_dir=args.results_dir,
+        psm_file=args.psm_file,
         checkpoint_dir=args.checkpoint_dir,
         batch_size=args.batch_size,
         epochs=args.epochs,

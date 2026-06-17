@@ -102,15 +102,3 @@ class IndexedMgfFallback:
             "params": {key.lower(): value for key, value in spectrum.params.items()},
         }
 
-
-def mgf_read_fallback(path: str | Path):
-    """Fallback generator yielding dicts compatible with pyteomics.mgf.read."""
-    from pathlib import Path
-    for spectrum in iter_mgf(Path(path)):
-        yield {
-            "m/z array": spectrum.mz_array,
-            "intensity array": spectrum.intensity_array,
-            "params": {key.lower(): value for key, value in spectrum.params.items()},
-        }
-
-

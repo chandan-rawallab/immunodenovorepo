@@ -2,9 +2,9 @@ import torch
 import torch.nn as nn
 
 try:
-    from .production_dataset import VOCAB_SIZE
+    from .spectral_dataset import VOCAB_SIZE
 except ImportError:
-    from production_dataset import VOCAB_SIZE
+    from spectral_dataset import VOCAB_SIZE
 
 class NeoepitopeSeq2Seq(nn.Module):
     """
@@ -12,7 +12,7 @@ class NeoepitopeSeq2Seq(nn.Module):
     Translates raw MGF mass-spectrometry signal into a natural Amino Acid sequence mapping 
     to identify and prioritize high-affinity biological neoantigens de novo.
     """
-    def __init__(self, cnn_channels=64, lstm_hidden=128, num_lstm_layers=2):
+    def __init__(self, cnn_channels=128, lstm_hidden=256, num_lstm_layers=2):
         super().__init__()
         
         # 1. Feature Extractor (1D Convolutional Neural Network)
@@ -42,9 +42,12 @@ class NeoepitopeSeq2Seq(nn.Module):
         
         # 3. Dense Classification Output
         # Maps the combined Bi-directional sequence matrices to the 20 biological amino acids + tokens
+        # Two-layer head: (hidden*2 -> hidden) -> VOCAB_SIZE for better generalisation
         self.fc = nn.Sequential(
+            nn.Linear(lstm_hidden * 2, lstm_hidden),
+            nn.ReLU(),
             nn.Dropout(p=0.3),
-            nn.Linear(lstm_hidden * 2, VOCAB_SIZE)
+            nn.Linear(lstm_hidden, VOCAB_SIZE)
         )
 
     def forward(self, x):

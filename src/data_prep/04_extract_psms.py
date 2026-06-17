@@ -27,15 +27,24 @@ def extract_psms(input_dir, output_file, manifest_file):
         print(f"No PSM files found in {input_dir}")
         return
 
+    manifest_runs = set(str(x) for x in manifest['run_id'].dropna())
+    strict_manifest = os.environ.get("ALLOW_UNKNOWN_RUNS", "").lower() not in {"1", "true", "yes"}
+
     print(f"Processing {len(psm_files)} PSM files...")
+    if strict_manifest:
+        print("Strict manifest mode enabled: runs missing from manifest will be skipped.")
     
     all_psms = []
+    skipped_unmapped = []
     
     for f in tqdm(psm_files, desc="Extracting PSMs"):
         # Pattern usually msms_<run_id>.raw.txt
         # Extract run_id from filename
         fname = os.path.basename(f)
         run_id = fname.replace("msms_", "").replace(".raw.txt", "").replace(".txt", "")
+        if strict_manifest and run_id not in manifest_runs:
+            skipped_unmapped.append(run_id)
+            continue
         patient_id = run_to_patient.get(run_id, "Unknown")
         
         try:
@@ -77,6 +86,8 @@ def extract_psms(input_dir, output_file, manifest_file):
             print(f"Error processing {fname}: {e}")
 
     if not all_psms:
+        if skipped_unmapped:
+            print(f"Skipped {len(skipped_unmapped)} PSM files not present in manifest.")
         print("No PSMs extracted after filtering.")
         return
 
@@ -88,6 +99,9 @@ def extract_psms(input_dir, output_file, manifest_file):
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     final_df.to_csv(output_file, sep='\t', index=False)
     print(f"\nSUCCESS: Extracted {len(final_df)} PSMs.")
+    if skipped_unmapped:
+        print(f"Skipped {len(skipped_unmapped)} PSM files not present in manifest.")
+        print("First skipped run IDs:", ", ".join(skipped_unmapped[:10]))
     print(f"Output saved to: {output_file}")
 
 if __name__ == "__main__":

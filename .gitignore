@@ -9,3 +9,19 @@ __pycache__/
 *.pth
 *.txt
 *.tsv
+
+# Antigravity CLI
+.antigravitycli/
+
+# System locks
+.~lock.*
+*.bak
+*.log
+
+# Scratch and Archive
+scratch/
+archive/
+
+# Documents & Presentations
+*.docx
+*.pptx

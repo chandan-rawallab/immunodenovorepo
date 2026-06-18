@@ -32,6 +32,26 @@ Risk: High.
 
 ---
 
+### spectral_dataset.py
+- Uses indexed MGF access and reader caching, which is positive for scalability.
+- Missing spectra are silently replaced with zero-valued spectra and empty peptide labels.
+- Broad exception handling suppresses root-cause debugging.
+- Spectrum lookup relies on several fragile ID formats.
+- Peptide truncation is not logged.
+- Dataset initialization validates MGF existence using a row-wise loop that can be vectorized.
+
+Recommendations:
+- Track and report missing-spectrum counts.
+- Replace silent exception suppression with structured logging.
+- Build a unified spectrum index instead of probing multiple key formats.
+- Log peptide truncation events.
+- Vectorize MGF run validation.
+- Evaluate DataLoader multiprocessing behaviour with cached readers.
+
+Risk: High.
+
+---
+
 ### 05_train_denovo_model.py
 - PAD masking, gradient clipping, early stopping and reproducible splits are implemented.
 - Dedicated held-out test set is generated.

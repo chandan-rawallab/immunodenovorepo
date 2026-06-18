@@ -110,6 +110,25 @@ Risk: High.
 
 ---
 
+### 07_filter_neoantigens.py
+- Implements a biologically sensible filtering chain: score thresholding, HLA-I length filtering, database subtraction, PSM support filtering and missense detection.
+- Entire reference proteome is loaded into memory and all 8–11mer peptides are indexed, which may become expensive for larger FASTA databases.
+- find_source_proteins() reparses the FASTA for every matched candidate, creating avoidable repeated I/O.
+- Uses DataFrame apply()/iterrows() heavily in several stages, which may become slow on larger candidate sets.
+- Mutation detection is limited to single amino-acid substitutions and will not identify indels, frameshifts or more complex events.
+- Sample-specific database subtraction logic appears correct but should be validated against publication cohort expectations.
+
+Recommendations:
+- Cache protein lookup information instead of reparsing FASTA repeatedly.
+- Profile runtime on large candidate sets and replace row-wise operations where possible.
+- Add audit metrics for candidate counts at every filter stage.
+- Validate Class A/B/C classification assumptions against proposal requirements.
+- Consider integrating genomic evidence when available instead of sequence-only mutation inference.
+
+Risk: Medium-High.
+
+---
+
 ### 00d_link_expression.py
 - Mock RNA generation only occurs when --debug-expression is explicitly enabled.
 - Deterministic RNG seeding improves reproducibility.

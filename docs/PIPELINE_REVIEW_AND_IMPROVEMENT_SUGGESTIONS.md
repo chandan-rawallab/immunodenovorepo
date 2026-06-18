@@ -2,79 +2,45 @@
 
 ## Newly Confirmed Findings
 
-### Critical: Verify train/test peptide leakage
+### High: Strengthen ranking-stage provenance and auditing
 Observation:
-- Current training workflow appears to split spectra rather than unique peptide sequences.
-- Repeated peptide observations may therefore occur in both train and test sets.
+- 08_rank_candidates.py performs critical final evidence classification.
+- Missing HLA predictions, missing RNA data, and duplicate-candidate collapsing are not comprehensively summarized in an audit output.
 
 Recommendation:
-- Perform grouped splitting by peptide sequence.
-- Audit overlap between training peptides and test_set_psms.tsv.
+- Emit ranking statistics and evidence-stage QC reports.
+- Record MHCflurry version and prediction provenance.
+- Record duplicate-collapse counts and evidence transitions.
 
 Priority: P1
 
 ---
 
-### High: Verify mass-filter integration
+### High: Optimize expression assignment
 Observation:
-- mass_filter.py is implemented and scientifically valuable.
-- Integration into the production inference path has not yet been confirmed.
+- Expression scoring relies on row-wise DataFrame apply operations.
+- Runtime may grow substantially with larger candidate sets.
 
 Recommendation:
-- Trace execution from run_pipeline.sh through inference outputs.
-- Measure candidate reduction statistics.
-
-Priority: P1
-
----
-
-### High: Optimize neoantigen filtering performance
-Observation:
-- 07_filter_neoantigens.py reparses FASTA data during source-protein discovery.
-- Multiple row-wise pandas operations may become bottlenecks at scale.
-
-Recommendation:
-- Cache protein mappings.
-- Reduce repeated FASTA scans.
-- Benchmark runtime on larger cohorts.
+- Replace repeated row-wise evaluation with indexed merges/vectorized lookups.
 
 Priority: P1-P2
 
 ---
 
-### Medium: Improve checkpoint provenance
-Recommendation:
-- Save training configuration.
-- Save manifest hash/version.
-- Save git commit identifier.
-
-Priority: P2
-
----
-
-### Medium: psm_dataset memory scaling
+### Medium: Validate sample mapping assumptions
 Observation:
-- Dataset currently stores matched spectra in memory.
+- Ranking logic assumes sample_id maps directly to patient_id and falls back to run_id matching.
 
 Recommendation:
-- Implement indexed retrieval or true lazy loading.
-
-Priority: P2
-
----
-
-### Medium: cnnlstm_model architecture improvements
-Recommendation:
-- Evaluate attention mechanism.
-- Evaluate mass-aware decoding.
+- Explicitly validate manifest relationships across future cohorts.
 
 Priority: P2
 
 ---
 
 ## Next Audit Targets
-1. src/postprocess/08_rank_candidates.py
-2. src/evaluation/10_evaluate_denovo_model.py
-3. src/validation/preflight_validate.py
-4. src/validation/provenance_audit.py
-5. run_pipeline.sh
+1. src/evaluation/10_evaluate_denovo_model.py
+2. src/validation/preflight_validate.py
+3. src/validation/provenance_audit.py
+4. run_pipeline.sh

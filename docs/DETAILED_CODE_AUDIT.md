@@ -3,121 +3,76 @@
 ## Scope
 This document is intended to become the permanent engineering and scientific audit record for the Objective 3 ImmunoDeNovo pipeline.
 
-Repository Areas:
-- src/data_prep
-- src/cnnlstm
-- src/training
-- src/inference
-- src/postprocess
-- src/evaluation
-- src/validation
+## Confirmed Audit Findings (Completed Reviews)
+
+### cnnlstm_model.py
+- CNN + BiLSTM architecture is reasonable for spectrum-to-sequence learning.
+- BatchNorm and Dropout are present.
+- No attention mechanism currently implemented.
+- Model itself is not mass-aware; relies on downstream filtering.
+
+Recommendations:
+- Evaluate attention-based decoder.
+- Integrate precursor-mass awareness or enforce mass filtering during inference.
+
+Risk: Medium.
 
 ---
 
-# Executive Summary
-
-Current strengths:
-- End-to-end pipeline exists.
-- Curated manifest workflow implemented.
-- HLA provenance tracking present.
-- Expression linkage framework implemented.
-- Training and inference separation is clear.
-- Validation and provenance auditing modules exist.
-
-Primary review priorities:
-1. Model architecture validation.
-2. Dataset integrity validation.
-3. De novo FDR methodology validation.
-4. Mass-filter integration.
-5. Publication-readiness review.
-
----
-
-# Confirmed Audit Findings (Completed Reviews)
-
-## psm_dataset.py
-
-Confirmed:
+### psm_dataset.py
 - Dataset is NOT truly lazy despite comments claiming lazy parsing.
-- Entire MGF file is iterated during initialization and matching spectra are stored in self.spectra.
-- Memory consumption scales with number of labeled spectra.
-- Scan→sequence mapping logic appears correct.
-- Sequence truncation occurs through max_seq_len clipping and requires validation against peptide length distribution.
+- Entire MGF file is iterated during initialization and matching spectra are stored in memory.
+- Duplicate peptide observations may contribute to train/test leakage if split incorrectly.
 
-Recommendation:
-- Replace in-memory spectrum storage with indexed access or streaming retrieval.
+Recommendations:
+- Replace in-memory spectrum storage with indexed access.
+- Audit peptide duplication across train/test partitions.
 
-Risk:
-High.
+Risk: High.
 
 ---
 
-## 00d_link_expression.py
+### 05_train_denovo_model.py
+- PAD masking, gradient clipping, early stopping and reproducible splits are implemented.
+- Dedicated held-out test set is generated.
+- Potential train/test leakage exists because splitting is spectrum-based rather than peptide-based.
+- Checkpoint provenance tracking could be improved.
 
-Confirmed:
+Recommendations:
+- Use peptide-grouped train/test splitting.
+- Save training_config.json and manifest metadata with checkpoints.
+- Verify final held-out evaluation path.
+
+Risk: High (scientific validation).
+
+---
+
+### 00d_link_expression.py
 - Mock RNA generation only occurs when --debug-expression is explicitly enabled.
 - Deterministic RNG seeding improves reproducibility.
-- RNA provenance labels are recorded.
-- Real expression overrides are supported.
 
-Recommendation:
-- Prevent mock_debug RNA from entering publication-facing outputs.
-
-Risk:
-Medium.
+Risk: Medium.
 
 ---
 
-## 00f_rebuild_curated_manifest.py
-
-Confirmed:
+### 00f_rebuild_curated_manifest.py
 - Rebuilds cohort from curated publication manifest.
-- Tracks excluded runs in a separate audit table.
-- Enforces expected cohort size checks.
-- Improves reproducibility versus heuristic manifest construction.
+- Tracks excluded runs separately.
 
-Recommendation:
-- Validate all curated HLA assignments against publication supplementary material.
-
-Risk:
-Medium.
+Risk: Medium.
 
 ---
 
-## 05_extract_unlabeled_spectra.py
-
-Confirmed:
+### 05_extract_unlabeled_spectra.py
 - Uses streaming MGF read/write workflow.
-- Avoids loading entire MGF collections into memory.
-- Manifest filtering implemented.
-- Stale output cleanup implemented.
+- Avoids loading complete MGF collections into memory.
 
-Recommendation:
-- Verify scan identifier extraction against all MGF title formats.
-
-Risk:
-Low-Medium.
+Risk: Low-Medium.
 
 ---
 
-## mass_filter.py
+### mass_filter.py
+- Implements precursor-mass validation.
+- Production integration path remains to be verified.
 
-Confirmed:
-- Implements physically meaningful precursor-mass validation.
-- Computes theoretical peptide mass.
-- Computes precursor neutral mass.
-- Filters candidates using ppm tolerance.
-- Keeps candidates conservatively when precursor metadata is unavailable.
-
-Outstanding Review:
-- Verify production integration path from 06_predict_denovo.py.
-- Benchmark candidate reduction and recovery statistics.
-
-Risk:
-Low.
-
----
-
-# Remaining Audit Sections
-
-(Existing audit sections retained below and will be progressively replaced with confirmed findings as modules are inspected.)
+Risk: Low.

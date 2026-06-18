@@ -1,115 +1,66 @@
 # Pipeline Review and Improvement Suggestions
 
-## Purpose
-This document records findings from inspection of the Objective 3 pipeline and identifies areas requiring review, validation, or future improvement.
+## Newly Confirmed Findings
 
-## Confirmed Findings From Repository Inspection
-
-### Confirmed Finding A: psm_dataset.py is not truly lazy-loaded
-Status: Confirmed
-
+### Critical: Verify train/test peptide leakage
 Observation:
-- The class description claims lazy parsing.
-- During initialization, all matching spectra are appended into self.spectra.
-- Large cohorts may therefore consume substantial memory.
+- Current training workflow appears to split spectra rather than unique peptide sequences.
+- Repeated peptide observations may therefore occur in both train and test sets.
 
 Recommendation:
-- Store scan offsets or identifiers rather than complete spectrum objects.
-- Load spectra on demand in __getitem__.
+- Perform grouped splitting by peptide sequence.
+- Audit overlap between training peptides and test_set_psms.tsv.
 
-Priority: Medium
+Priority: P1
 
 ---
 
-### Confirmed Finding B: Expression linker correctly gates mock RNA generation
-Status: Confirmed Good Practice
-
+### High: Verify mass-filter integration
 Observation:
-- Mock TPM generation only occurs when --debug-expression is explicitly supplied.
-- Deterministic seeding improves reproducibility.
-- RNA provenance is written into manifest metadata.
+- mass_filter.py is implemented and scientifically valuable.
+- Integration into the production inference path has not yet been confirmed.
 
 Recommendation:
-- Preserve current behavior.
-- Prevent mock RNA evidence from appearing in publication-grade outputs.
+- Trace execution from run_pipeline.sh through inference outputs.
+- Measure candidate reduction statistics.
 
-Priority: Low
+Priority: P1
 
 ---
 
-### Confirmed Finding C: Curated manifest rebuild improves reproducibility
-Status: Confirmed Good Practice
-
-Observation:
-- Active cohort is explicitly reconstructed.
-- Excluded runs are tracked.
-- HLA provenance source is preserved.
-
+### Medium: Improve checkpoint provenance
 Recommendation:
-- Cross-check all patient-to-HLA mappings against publication supplementary material.
+- Save training configuration.
+- Save manifest hash/version.
+- Save git commit identifier.
 
-Priority: Medium
+Priority: P2
 
 ---
 
-### Confirmed Finding D: Mass filter exists but production integration remains unverified
-Status: Needs Validation
-
+### Medium: psm_dataset memory scaling
 Observation:
-- src/cnnlstm/mass_filter.py exists.
-- Physical precursor-mass validation is implemented.
-- Pipeline invocation path has not yet been confirmed.
+- Dataset currently stores matched spectra in memory.
 
 Recommendation:
-- Verify execution path from run_pipeline.sh.
-- Measure candidate reduction before and after filtering.
+- Implement indexed retrieval or true lazy loading.
 
-Priority: High
+Priority: P2
 
 ---
 
-### Confirmed Finding E: Unlabeled spectrum extraction uses efficient streaming
-Status: Confirmed Good Practice
-
-Observation:
-- Generator-based processing avoids loading complete MGF files.
-- Manifest filtering reduces accidental processing of inactive runs.
-
+### Medium: cnnlstm_model architecture improvements
 Recommendation:
-- Add duplicate-spectrum reporting.
-- Add scan-ID validation report.
+- Evaluate attention mechanism.
+- Evaluate mass-aware decoding.
 
-Priority: Low
+Priority: P2
 
 ---
 
-## High Priority Findings
-
-### 1. Mass Filter Not Integrated Into Main Pipeline
-Status: Review Required
-
-The repository contains `src/cnnlstm/mass_filter.py`, which performs precursor mass validation of de novo predictions.
-
-### 2. Silent Missing Spectrum Handling
-Status: Review Required
-
-Observed in spectral_dataset.py.
-
-### 3. De Novo FDR Strategy Requires Validation
-Status: Scientific Review Required
-
-### 4. RNA Evidence Currently Debug Only
-Status: Expected Limitation
-
-## Overall Assessment
-
-Current repository quality is substantially stronger than a prototype pipeline.
-
-Most remaining risks are scientific-validation risks rather than software-engineering failures.
-
-Highest-priority remaining audits:
-1. cnnlstm_model.py
-2. 05_train_denovo_model.py
-3. 06_predict_denovo.py
-4. 07_filter_neoantigens.py
-5. 08_rank_candidates.py
+## Next Audit Targets
+1. src/cnnlstm/spectral_dataset.py
+2. src/inference/06_predict_denovo.py
+3. src/postprocess/07_filter_neoantigens.py
+4. src/postprocess/08_rank_candidates.py
+5. src/evaluation/10_evaluate_denovo_model.py

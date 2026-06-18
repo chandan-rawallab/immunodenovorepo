@@ -28,6 +28,20 @@ Priority: P1
 
 ---
 
+### High: Optimize neoantigen filtering performance
+Observation:
+- 07_filter_neoantigens.py reparses FASTA data during source-protein discovery.
+- Multiple row-wise pandas operations may become bottlenecks at scale.
+
+Recommendation:
+- Cache protein mappings.
+- Reduce repeated FASTA scans.
+- Benchmark runtime on larger cohorts.
+
+Priority: P1-P2
+
+---
+
 ### Medium: Improve checkpoint provenance
 Recommendation:
 - Save training configuration.
@@ -59,8 +73,8 @@ Priority: P2
 ---
 
 ## Next Audit Targets
-1. src/cnnlstm/spectral_dataset.py
-2. src/inference/06_predict_denovo.py
-3. src/postprocess/07_filter_neoantigens.py
-4. src/postprocess/08_rank_candidates.py
-5. src/evaluation/10_evaluate_denovo_model.py
+1. src/postprocess/08_rank_candidates.py
+2. src/evaluation/10_evaluate_denovo_model.py
+3. src/validation/preflight_validate.py
+4. src/validation/provenance_audit.py
+5. run_pipeline.sh

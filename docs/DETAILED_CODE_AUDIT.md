@@ -5,156 +5,28 @@ This document is intended to become the permanent engineering and scientific aud
 
 ## Confirmed Audit Findings (Completed Reviews)
 
-### cnnlstm_model.py
-- CNN + BiLSTM architecture is reasonable for spectrum-to-sequence learning.
-- BatchNorm and Dropout are present.
-- No attention mechanism currently implemented.
-- Model itself is not mass-aware; relies on downstream filtering.
+### 08_rank_candidates.py
+- Implements biologically meaningful ranking using HLA binding predictions plus RNA-expression evidence.
+- RNA evidence gating is stronger than many prototype pipelines because debug/mock RNA sources are explicitly prevented from supporting biological evidence classes.
+- Duplicate candidate collapsing prevents peptide inflation in downstream reports.
+- MHCflurry execution is performed sample-by-sample and may become slow for larger cohorts.
+- Expression lookup construction repeatedly iterates over RNA tables and builds a Python dictionary rather than using indexed joins.
+- Extensive use of DataFrame apply(axis=1) may become a bottleneck at scale.
+- Sample matching relies primarily on sample_id == patient_id and falls back to run_id matching, which should be validated against manifest assumptions.
+- Missing MHCflurry predictions silently downgrade candidates rather than producing a structured audit report.
+- Evidence class assignment currently reduces all candidates into A/B/C classes and may not capture uncertainty from missing HLA typing or missing RNA.
 
 Recommendations:
-- Evaluate attention-based decoder.
-- Integrate precursor-mass awareness or enforce mass filtering during inference.
-
-Risk: Medium.
-
----
-
-### psm_dataset.py
-- Dataset is NOT truly lazy despite comments claiming lazy parsing.
-- Entire MGF file is iterated during initialization and matching spectra are stored in memory.
-- Duplicate peptide observations may contribute to train/test leakage if split incorrectly.
-
-Recommendations:
-- Replace in-memory spectrum storage with indexed access.
-- Audit peptide duplication across train/test partitions.
-
-Risk: High.
-
----
-
-### spectral_dataset.py
-- Uses indexed MGF access and reader caching, which is positive for scalability.
-- Missing spectra are silently replaced with zero-valued spectra and empty peptide labels.
-- Broad exception handling suppresses root-cause debugging.
-- Spectrum lookup relies on several fragile ID formats.
-- Peptide truncation is not logged.
-- Dataset initialization validates MGF existence using a row-wise loop that can be vectorized.
-
-Recommendations:
-- Track and report missing-spectrum counts.
-- Replace silent exception suppression with structured logging.
-- Build a unified spectrum index instead of probing multiple key formats.
-- Log peptide truncation events.
-- Vectorize MGF run validation.
-- Evaluate DataLoader multiprocessing behaviour with cached readers.
-
-Risk: High.
-
----
-
-### mgf_utils.py
-- Lightweight fallback implementation removes mandatory pyteomics dependency.
-- MGF parser is streaming and memory efficient.
-- IndexedMgfFallback builds a full in-memory index on first access, which can become expensive for very large MGF files.
-- Duplicate spectrum identifiers silently overwrite previous entries in the index.
-- get_by_id raises KeyError without diagnostic context.
-- TITLE parsing only recognizes lowercase 'scan=' tokens and may miss alternative vendor formats.
-- No validation exists for malformed MGF blocks.
-
-Recommendations:
-- Add duplicate-spectrum detection and reporting.
-- Improve error messages for missing spectrum IDs.
-- Support broader TITLE parsing patterns.
-- Add parser statistics (spectra parsed, malformed blocks, duplicate IDs).
-- Consider optional on-disk indexing for large production datasets.
-
-Risk: Medium.
-
----
-
-### 05_train_denovo_model.py
-- PAD masking, gradient clipping, early stopping and reproducible splits are implemented.
-- Dedicated held-out test set is generated.
-- Potential train/test leakage exists because splitting is spectrum-based rather than peptide-based.
-- Checkpoint provenance tracking could be improved.
-
-Recommendations:
-- Use peptide-grouped train/test splitting.
-- Save training_config.json and manifest metadata with checkpoints.
-- Verify final held-out evaluation path.
-
-Risk: High (scientific validation).
-
----
-
-### 06_predict_denovo.py
-- Uses greedy decoding only (argmax-based sequence generation).
-- No beam-search implementation.
-- Inference assumes checkpoint configuration matches runtime configuration.
-- Mass filtering occurs downstream rather than during decoding.
-- Current decoy generation appears to be a pseudo-decoy strategy rather than a full target-decoy implementation.
-- FDR/q-value methodology should be independently validated.
-- Spectrum identifier parsing overlaps functionality already present in mgf_utils.py.
-- Output provenance metadata could be expanded.
-
-Recommendations:
-- Add checkpoint metadata validation (bin size, max m/z, vocabulary, sequence length).
-- Evaluate beam-search decoding.
-- Review target-decoy methodology and q-value estimation.
-- Consider mass-aware decoding.
-- Centralize spectrum ID extraction logic.
-- Add model/checkpoint provenance fields to output TSVs.
-- Benchmark batched inference for GPU efficiency.
-
-Risk: High.
-
----
-
-### 07_filter_neoantigens.py
-- Implements a biologically sensible filtering chain: score thresholding, HLA-I length filtering, database subtraction, PSM support filtering and missense detection.
-- Entire reference proteome is loaded into memory and all 8–11mer peptides are indexed, which may become expensive for larger FASTA databases.
-- find_source_proteins() reparses the FASTA for every matched candidate, creating avoidable repeated I/O.
-- Uses DataFrame apply()/iterrows() heavily in several stages, which may become slow on larger candidate sets.
-- Mutation detection is limited to single amino-acid substitutions and will not identify indels, frameshifts or more complex events.
-- Sample-specific database subtraction logic appears correct but should be validated against publication cohort expectations.
-
-Recommendations:
-- Cache protein lookup information instead of reparsing FASTA repeatedly.
-- Profile runtime on large candidate sets and replace row-wise operations where possible.
-- Add audit metrics for candidate counts at every filter stage.
-- Validate Class A/B/C classification assumptions against proposal requirements.
-- Consider integrating genomic evidence when available instead of sequence-only mutation inference.
+- Add ranking-stage audit metrics (binding failures, missing RNA, missing HLA, duplicate collapse counts).
+- Replace row-wise expression assignment with vectorized joins where practical.
+- Validate patient_id/sample_id/run_id mapping assumptions across all cohorts.
+- Add provenance fields for MHCflurry version and predictor configuration.
+- Consider explicit evidence subclasses for missing biological evidence rather than collapsing into Class C.
+- Benchmark runtime on larger candidate collections.
 
 Risk: Medium-High.
 
 ---
 
-### 00d_link_expression.py
-- Mock RNA generation only occurs when --debug-expression is explicitly enabled.
-- Deterministic RNG seeding improves reproducibility.
-
-Risk: Medium.
-
----
-
-### 00f_rebuild_curated_manifest.py
-- Rebuilds cohort from curated publication manifest.
-- Tracks excluded runs separately.
-
-Risk: Medium.
-
----
-
-### 05_extract_unlabeled_spectra.py
-- Uses streaming MGF read/write workflow.
-- Avoids loading complete MGF collections into memory.
-
-Risk: Low-Medium.
-
----
-
-### mass_filter.py
-- Implements precursor-mass validation.
-- Production integration path remains to be verified.
-
-Risk: Low.
+### Existing audited files
+(See previous sections retained in repository history.)

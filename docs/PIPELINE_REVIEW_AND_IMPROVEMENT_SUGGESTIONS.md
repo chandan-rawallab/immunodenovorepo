@@ -2,38 +2,83 @@
 
 ## Newly Confirmed Findings
 
-### High: Strengthen ranking-stage provenance and auditing
+### Critical: Verify train/test peptide leakage
 Observation:
-- 08_rank_candidates.py performs critical final evidence classification.
-- Missing HLA predictions, missing RNA data, and duplicate-candidate collapsing are not comprehensively summarized in an audit output.
+- Current training workflow appears to split spectra rather than unique peptide sequences.
+- Repeated peptide observations may therefore occur in both train and test sets.
 
 Recommendation:
-- Emit ranking statistics and evidence-stage QC reports.
-- Record MHCflurry version and prediction provenance.
-- Record duplicate-collapse counts and evidence transitions.
+- Perform grouped splitting by peptide sequence.
+- Audit overlap between training peptides and test_set_psms.tsv.
 
 Priority: P1
 
 ---
 
-### High: Optimize expression assignment
+### High: Verify mass-filter integration
 Observation:
-- Expression scoring relies on row-wise DataFrame apply operations.
-- Runtime may grow substantially with larger candidate sets.
+- mass_filter.py is implemented and scientifically valuable.
+- Integration into the production inference path has not yet been fully verified.
 
 Recommendation:
-- Replace repeated row-wise evaluation with indexed merges/vectorized lookups.
+- Trace execution from run_pipeline.sh through inference outputs.
+- Measure candidate reduction statistics.
+
+Priority: P1
+
+---
+
+### High: Optimize neoantigen filtering performance
+Observation:
+- 07_filter_neoantigens.py reparses FASTA data during source-protein discovery.
+- Multiple row-wise pandas operations may become bottlenecks at scale.
+
+Recommendation:
+- Cache protein mappings.
+- Reduce repeated FASTA scans.
 
 Priority: P1-P2
 
 ---
 
-### Medium: Validate sample mapping assumptions
+### High: Strengthen ranking-stage provenance and auditing
 Observation:
-- Ranking logic assumes sample_id maps directly to patient_id and falls back to run_id matching.
+- 08_rank_candidates.py performs critical final evidence classification.
+- Missing HLA predictions, missing RNA data, and duplicate-candidate collapsing are not comprehensively summarized.
 
 Recommendation:
-- Explicitly validate manifest relationships across future cohorts.
+- Emit ranking statistics and evidence-stage QC reports.
+- Record MHCflurry version and prediction provenance.
+
+Priority: P1
+
+---
+
+### Medium: Improve checkpoint provenance
+Recommendation:
+- Save training configuration.
+- Save manifest hash/version.
+- Save git commit identifier.
+
+Priority: P2
+
+---
+
+### Medium: psm_dataset memory scaling
+Observation:
+- Dataset currently stores matched spectra in memory.
+
+Recommendation:
+- Implement indexed retrieval or true lazy loading.
+
+Priority: P2
+
+---
+
+### Medium: cnnlstm_model architecture improvements
+Recommendation:
+- Evaluate attention mechanism.
+- Evaluate mass-aware decoding.
 
 Priority: P2
 

@@ -87,6 +87,29 @@ Risk: High (scientific validation).
 
 ---
 
+### 06_predict_denovo.py
+- Uses greedy decoding only (argmax-based sequence generation).
+- No beam-search implementation.
+- Inference assumes checkpoint configuration matches runtime configuration.
+- Mass filtering occurs downstream rather than during decoding.
+- Current decoy generation appears to be a pseudo-decoy strategy rather than a full target-decoy implementation.
+- FDR/q-value methodology should be independently validated.
+- Spectrum identifier parsing overlaps functionality already present in mgf_utils.py.
+- Output provenance metadata could be expanded.
+
+Recommendations:
+- Add checkpoint metadata validation (bin size, max m/z, vocabulary, sequence length).
+- Evaluate beam-search decoding.
+- Review target-decoy methodology and q-value estimation.
+- Consider mass-aware decoding.
+- Centralize spectrum ID extraction logic.
+- Add model/checkpoint provenance fields to output TSVs.
+- Benchmark batched inference for GPU efficiency.
+
+Risk: High.
+
+---
+
 ### 00d_link_expression.py
 - Mock RNA generation only occurs when --debug-expression is explicitly enabled.
 - Deterministic RNG seeding improves reproducibility.

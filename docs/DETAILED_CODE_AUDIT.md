@@ -52,6 +52,26 @@ Risk: High.
 
 ---
 
+### mgf_utils.py
+- Lightweight fallback implementation removes mandatory pyteomics dependency.
+- MGF parser is streaming and memory efficient.
+- IndexedMgfFallback builds a full in-memory index on first access, which can become expensive for very large MGF files.
+- Duplicate spectrum identifiers silently overwrite previous entries in the index.
+- get_by_id raises KeyError without diagnostic context.
+- TITLE parsing only recognizes lowercase 'scan=' tokens and may miss alternative vendor formats.
+- No validation exists for malformed MGF blocks.
+
+Recommendations:
+- Add duplicate-spectrum detection and reporting.
+- Improve error messages for missing spectrum IDs.
+- Support broader TITLE parsing patterns.
+- Add parser statistics (spectra parsed, malformed blocks, duplicate IDs).
+- Consider optional on-disk indexing for large production datasets.
+
+Risk: Medium.
+
+---
+
 ### 05_train_denovo_model.py
 - PAD masking, gradient clipping, early stopping and reproducible splits are implemented.
 - Dedicated held-out test set is generated.

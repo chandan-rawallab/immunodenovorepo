@@ -38,11 +38,18 @@ Risk: High.
 - Broad exception handling suppresses root-cause debugging.
 - Spectrum lookup relies on several fragile ID formats.
 - Peptide truncation is not logged.
+- Raw peak intensities are used without transformation.
+- No peak filtering is applied before vectorization.
+- Unknown amino acids collapse into the PAD token.
 
 Recommendations:
 - Track and report missing-spectrum counts.
 - Replace silent exception suppression with structured logging.
 - Build a unified spectrum index instead of probing multiple key formats.
+- Evaluate log/square-root intensity transformation.
+- Evaluate top-N peak filtering.
+- Add explicit UNK token handling.
+- Add validation for peptide truncation.
 
 Risk: High.
 

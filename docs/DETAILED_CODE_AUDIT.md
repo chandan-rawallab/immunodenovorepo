@@ -125,3 +125,24 @@ Recommendations:
 - Add provenance fields for MHCflurry version and predictor configuration.
 
 Risk: Medium-High.
+
+---
+
+### 10_evaluate_denovo_model.py
+- Evaluation is performed against a dedicated held-out PSM test split.
+- Metrics include exact peptide accuracy, token accuracy, edit distance, length accuracy, and amino-acid positional accuracy.
+- Missing spectra are tracked and reported rather than silently ignored.
+- Entire MGF files are streamed sequentially for scan lookup, which can become expensive on large cohorts.
+- Evaluation recreates spectral vectorization logic instead of reusing a shared preprocessing module.
+- Default model instantiation uses NeoepitopeSeq2Seq() without validating architecture metadata against the checkpoint.
+- No confidence calibration, top-k accuracy, or beam-search evaluation metrics are reported.
+- Duplicate peptide observations may inflate performance if train/test leakage exists upstream.
+
+Recommendations:
+- Save architecture metadata alongside checkpoints and validate before loading.
+- Reuse a shared spectrum preprocessing implementation to prevent training/evaluation drift.
+- Consider indexed MGF access for faster evaluation.
+- Add top-k peptide recovery metrics and confidence calibration statistics.
+- Explicitly audit peptide overlap between training and held-out sets.
+
+Risk: Medium-High.

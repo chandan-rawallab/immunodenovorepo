@@ -2,7 +2,21 @@
 
 ## Newly Confirmed Findings
 
-### Critical: Verify train/test peptide leakage
+### Critical: Silent spectrum lookup failures in spectral_dataset.py
+Observation:
+- Missing spectra are silently converted into zero-valued training examples.
+- Broad exception handling hides indexing and parsing problems.
+
+Recommendation:
+- Add explicit failure accounting.
+- Log missing run_id/scan_id combinations.
+- Fail training when failure rate exceeds threshold.
+
+Priority: P1
+
+---
+
+### High: Verify train/test peptide leakage
 Observation:
 - Current training workflow appears to split spectra rather than unique peptide sequences.
 - Repeated peptide observations may therefore occur in both train and test sets.
@@ -12,6 +26,19 @@ Recommendation:
 - Audit overlap between training peptides and test_set_psms.tsv.
 
 Priority: P1
+
+---
+
+### High: Improve spectrum preprocessing
+Observation:
+- No intensity transformation is currently applied.
+- No top-N peak filtering is currently applied.
+
+Recommendation:
+- Evaluate log1p or sqrt intensity scaling.
+- Benchmark top-200 and top-300 peak filtering.
+
+Priority: P1-P2
 
 ---
 

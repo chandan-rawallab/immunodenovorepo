@@ -81,6 +81,23 @@ Priority: P1
 
 ---
 
+### High: Improve evaluation reproducibility (10_evaluate_denovo_model.py)
+Observation:
+- Evaluation logic rebuilds spectrum preprocessing independently from training code.
+- Checkpoint loading does not validate architecture metadata.
+- Large MGF files are scanned sequentially for every run.
+- No top-k recovery metrics or confidence calibration statistics are reported.
+
+Recommendation:
+- Save model architecture metadata with checkpoints.
+- Use a shared preprocessing implementation across training, inference, and evaluation.
+- Consider indexed spectrum retrieval.
+- Add top-k, edit-distance distribution, and confidence calibration reporting.
+
+Priority: P1
+
+---
+
 ### Medium: Improve checkpoint provenance
 Recommendation:
 - Save training configuration.
@@ -112,7 +129,7 @@ Priority: P2
 ---
 
 ## Next Audit Targets
-1. src/evaluation/10_evaluate_denovo_model.py
-2. src/validation/preflight_validate.py
-3. src/validation/provenance_audit.py
-4. run_pipeline.sh
+1. src/validation/preflight_validate.py
+2. src/validation/provenance_audit.py
+3. run_pipeline.sh
+4. src/evaluation/09_evaluate_neoantigens.py

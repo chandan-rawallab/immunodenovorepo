@@ -132,6 +132,48 @@ def compute_sequence_score(outputs: torch.Tensor, predicted_indices) -> float:
     return score / max(1, length)
 
 
+def beam_search_decode(outputs: torch.Tensor, beam_width: int = 5) -> list[tuple[str, float]]:
+    """
+    Independent position-wise beam search.
+    Returns list of (decoded_sequence, length_normalized_log_prob)
+    """
+    probs = torch.softmax(outputs, dim=-1).squeeze(0).cpu().numpy()
+    seq_len = probs.shape[0]
+    
+    beam = [([], 0.0)]
+    
+    for i in range(seq_len):
+        new_beam = []
+        for seq, score in beam:
+            if seq and INT_TO_AA.get(seq[-1], "") == "<END>":
+                new_beam.append((seq, score))
+                continue
+                
+            top_k = np.argsort(probs[i])[-beam_width:]
+            for idx in top_k:
+                p = probs[i, idx]
+                new_score = score + np.log(p + 1e-9)
+                new_beam.append((seq + [int(idx)], new_score))
+                
+        new_beam.sort(key=lambda x: x[1], reverse=True)
+        beam = new_beam[:beam_width]
+        
+    results = []
+    for seq, score in beam:
+        decoded = decode_sequence(seq)
+        if decoded:
+            norm_score = score / max(1, len(seq))
+            results.append((decoded, norm_score))
+            
+    unique_results = {}
+    for seq, score in results:
+        if seq not in unique_results or score > unique_results[seq]:
+            unique_results[seq] = score
+            
+    sorted_results = sorted(unique_results.items(), key=lambda x: x[1], reverse=True)
+    return sorted_results[:beam_width]
+
+
 # ---------------------------------------------------------------------------
 # Checkpoint validation
 # ---------------------------------------------------------------------------
@@ -225,6 +267,18 @@ def main():
         default=0.05,
         help="FDR threshold for target-decoy filtering.",
     )
+    parser.add_argument(
+        "--beam_width",
+        type=int,
+        default=5,
+        help="Beam width for decoding. Default is 5. If 1, behaves like greedy argmax.",
+    )
+    parser.add_argument(
+        "--mass_tolerance_ppm",
+        type=float,
+        default=None,
+        help="If provided, filters beam candidates to those matching precursor mass within this PPM.",
+    )
     args = parser.parse_args()
 
     MODEL_PATH = args.model
@@ -232,6 +286,12 @@ def main():
     OUT_FILE = args.output
     DEVICE = torch.device(args.device if args.device == "cuda" and torch.cuda.is_available() else "cpu")
     top_n = args.top_n_peaks if args.top_n_peaks > 0 else None
+    
+    if args.mass_tolerance_ppm is not None:
+        try:
+            from cnnlstm.mass_filter import precursor_neutral_mass, peptide_neutral_mass, ppm_error
+        except ImportError:
+            from mass_filter import precursor_neutral_mass, peptide_neutral_mass, ppm_error
 
     # --- Checkpoint validation (audit fix) ---
     if not os.path.exists(MODEL_PATH):
@@ -306,26 +366,50 @@ def main():
 
             with torch.no_grad():
                 outputs = model(input_tensor)
-                predicted_indices = torch.argmax(outputs, dim=-1).squeeze(0).cpu().numpy()
+                
+            beam_results = beam_search_decode(outputs, beam_width=args.beam_width)
+            
+            best_seq = None
+            best_score = float('-inf')
+            
+            if args.mass_tolerance_ppm is not None and beam_results:
+                pepmass_info = params.get("pepmass", [None])
+                prec_mz = pepmass_info[0] if isinstance(pepmass_info, tuple) else pepmass_info
+                charge_info = params.get("charge", [2])
+                charge = charge_info[0] if isinstance(charge_info, tuple) else charge_info
+                if isinstance(charge, str):
+                    charge = int(str(charge).replace('+', '').replace('-', ''))
+                elif charge is None:
+                    charge = 2
+                    
+                if prec_mz is not None:
+                    prec_mass = precursor_neutral_mass(float(prec_mz), charge)
+                    # Find highest scoring sequence in beam that matches mass
+                    for seq, score in beam_results:
+                        theo_mass = peptide_neutral_mass(seq)
+                        if theo_mass is not None:
+                            err = ppm_error(prec_mass, theo_mass)
+                            if err <= args.mass_tolerance_ppm:
+                                best_seq = seq
+                                best_score = score
+                                break
+                                
+            # Fallback to top sequence if mass filtering disabled or no match found
+            if best_seq is None and beam_results:
+                best_seq, best_score = beam_results[0]
 
-            predicted_seq = decode_sequence(predicted_indices)
-            score = compute_sequence_score(outputs, predicted_indices)
-
-            if 8 <= len(predicted_seq) <= 11:
+            if best_seq and 8 <= len(best_seq) <= 11:
                 candidates.append({
                     "run_id": run_id,
                     "spectrum_id": scan_id,
-                    "peptide": predicted_seq,
-                    "score": score,
+                    "peptide": best_seq,
+                    "score": best_score,
                     "decoy": False,
                 })
 
                 # Target-decoy: score the *reversed* sequence against the same
-                # spectrum to obtain an empirical null distribution.  This is
-                # intentional — the decoy sequence is scored by evaluating model
-                # log-probabilities for the reversed peptide tokens, providing a
-                # matched null under identical spectral conditions.
-                decoy_seq = predicted_seq[::-1]
+                # spectrum to obtain an empirical null distribution.
+                decoy_seq = best_seq[::-1]
                 decoy_indices = [AA_TO_INT.get(c, 0) for c in decoy_seq]
                 decoy_score = compute_sequence_score(outputs, decoy_indices)
                 candidates.append({

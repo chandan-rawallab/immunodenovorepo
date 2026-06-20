@@ -40,6 +40,13 @@ class NeoepitopeSeq2Seq(nn.Module):
             bidirectional=True
         )
         
+        # Attention mechanism to let each decoding step focus on relevant parts of the sequence
+        self.attention = nn.MultiheadAttention(
+            embed_dim=lstm_hidden * 2,
+            num_heads=4,
+            batch_first=True
+        )
+        
         # 3. Dense Classification Output
         # Maps the combined Bi-directional sequence matrices to the 20 biological amino acids + tokens
         # Two-layer head: (hidden*2 -> hidden) -> VOCAB_SIZE for better generalisation
@@ -64,7 +71,11 @@ class NeoepitopeSeq2Seq(nn.Module):
         # 2. LSTM Sequencing
         r_out, (h_n, c_n) = self.lstm(c_features)
         
-        # 3. Output prediction: (Batch, 30, VOCAB_SIZE)
+        # 3. Self-Attention
+        attn_out, _ = self.attention(r_out, r_out, r_out)
+        r_out = r_out + attn_out  # Residual connection
+        
+        # 4. Output prediction: (Batch, 30, VOCAB_SIZE)
         predictions = self.fc(r_out)
         
         return predictions

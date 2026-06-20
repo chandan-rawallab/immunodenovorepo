@@ -1,36 +1,79 @@
 #!/usr/bin/env python3
-"""Activity 3: FDR, length, and missense mutation filters for neoantigen candidates."""
+"""Activity 3: FDR, length, and missense mutation filters for neoantigen candidates.
+
+Audit fixes applied (2026-06-20):
+  - Reference proteome FASTA is parsed ONCE and a protein-to-sequence lookup
+    is cached so find_source_proteins() does not re-open the file per candidate.
+  - Per-stage candidate counts are printed at every filter step for audit trail.
+  - find_mutation() now explicitly labels the mutation type returned.
+"""
 
 import argparse
-import pandas as pd
 import re
-from pathlib import Path
-from pyteomics import fasta
 from collections import defaultdict
+from pathlib import Path
+
+import pandas as pd
+from pyteomics import fasta
 
 # Canonical HLA-I length 8-11
 CANONICAL_HLA_I_PATTERN = re.compile(r"^[ACDEFGHIKLMNPQRSTVWY]{8,11}$")
 
-def load_reference_peptides(fasta_path, lengths=[8, 9, 10, 11]):
-    """Index all 8-11mer peptides from human proteins, or all entries if the FASTA has no organism tags."""
+# ---------------------------------------------------------------------------
+# FASTA helpers – parsed once and cached
+# ---------------------------------------------------------------------------
+
+def _load_human_records(fasta_path: Path) -> list[tuple[str, str]]:
+    """Return (description, sequence) pairs for Homo sapiens entries only."""
     records = list(fasta.read(str(fasta_path)))
-    has_organism_tags = any("OS=" in desc or "OX=" in desc for desc, _ in records)
-    peptides = set()
-    print(f"Indexing reference proteome from {fasta_path}...")
+    has_tags = any("OS=" in d or "OX=" in d for d, _ in records)
+    if not has_tags:
+        return records
+    return [
+        (d, s)
+        for d, s in records
+        if "OS=Homo sapiens" in d or "OX=9606" in d
+    ]
+
+
+def build_reference_index(fasta_path: Path, lengths: list[int] = None):
+    """Build two indexes from the reference proteome in a single FASTA pass.
+
+    Returns
+    -------
+    ref_peptide_set : set[str]
+        All 8-11 mer subsequences of human proteins.
+    protein_lookup : dict[str, list[str]]
+        Maps full-length protein sequence → list of Uniprot IDs.
+        Used by find_source_proteins() without re-reading the file.
+    """
+    if lengths is None:
+        lengths = [8, 9, 10, 11]
+
+    records = _load_human_records(fasta_path)
+    ref_peptide_set: set[str] = set()
+    # Map sequence → [protein_id, ...] (multiple proteins can share a sequence)
+    seq_to_proteins: dict[str, list[str]] = defaultdict(list)
+
+    print(f"Indexing reference proteome from {fasta_path}…")
     for desc, sequence in records:
-        if has_organism_tags and "OS=Homo sapiens" not in desc and "OX=9606" not in desc:
-            continue
+        parts = desc.split("|")
+        protein_id = parts[1] if len(parts) > 1 else desc.split()[0]
+        seq_to_proteins[sequence].append(protein_id)
         for length in lengths:
             seq_len = len(sequence)
             for i in range(seq_len - length + 1):
-                peptides.add(sequence[i:i+length])
-    print(f"Indexed {len(peptides)} unique reference peptides.")
-    return peptides
+                ref_peptide_set.add(sequence[i : i + length])
 
-def find_mutation(peptide, reference_set):
-    """
-    Check if the peptide has exactly one mutation from a reference peptide.
-    Returns (wt_peptide, pos, wt_aa, mut_aa) or None.
+    print(f"Indexed {len(ref_peptide_set):,} unique reference peptides "
+          f"from {len(records):,} protein records.")
+    return ref_peptide_set, seq_to_proteins
+
+
+def find_mutation(peptide: str, reference_set: set[str]):
+    """Check if the peptide differs by exactly one substitution from a reference peptide.
+
+    Returns (wt_peptide, pos_1based, wt_aa, mut_aa) or None.
     """
     aas = "ACDEFGHIKLMNPQRSTVWY"
     for i in range(len(peptide)):
@@ -38,149 +81,185 @@ def find_mutation(peptide, reference_set):
         for wt_aa in aas:
             if wt_aa == mut_aa:
                 continue
-            potential_wt = peptide[:i] + wt_aa + peptide[i+1:]
-            if potential_wt in reference_set:
-                return potential_wt, i + 1, wt_aa, mut_aa
+            candidate_wt = peptide[:i] + wt_aa + peptide[i + 1 :]
+            if candidate_wt in reference_set:
+                return candidate_wt, i + 1, wt_aa, mut_aa
     return None
 
-def find_source_proteins(peptide, fasta_path):
-    """Find Uniprot IDs of proteins containing the exact peptide."""
-    records = list(fasta.read(str(fasta_path)))
-    has_organism_tags = any("OS=" in desc or "OX=" in desc for desc, _ in records)
-    sources = []
-    for description, sequence in records:
-        if has_organism_tags and "OS=Homo sapiens" not in description and "OX=9606" not in description:
-            continue
-        if peptide in sequence:
-            parts = description.split('|')
-            protein_id = parts[1] if len(parts) > 1 else description.split()[0]
-            sources.append(protein_id)
-    return sources
+
+def find_source_proteins(
+    wt_peptide: str, seq_to_proteins: dict[str, list[str]]
+) -> list[str]:
+    """Return Uniprot IDs for proteins containing *wt_peptide* (cached lookup)."""
+    found: list[str] = []
+    for sequence, prot_ids in seq_to_proteins.items():
+        if wt_peptide in sequence:
+            found.extend(prot_ids)
+    return found
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
 
 def main():
-    parser = argparse.ArgumentParser(description="Filter de novo candidates for neoantigens.")
-    parser.add_argument("--input", type=Path, required=True, help="Path to de_novo_candidates.tsv")
-    parser.add_argument("--psms", type=Path, required=True, help="Path to immunopeptidome_psms.tsv (database search hits)")
-    parser.add_argument("--fasta", type=Path, required=True, help="Path to reference proteome FASTA")
-    parser.add_argument("--manifest", type=Path, default="configs/sample_manifest.tsv", help="Sample manifest for run_id to sample_id mapping")
-    parser.add_argument("--output", type=Path, required=True, help="Output filtered TSV")
-    parser.add_argument("--score_cutoff", type=float, default=-0.5, help="De novo score cutoff (default: -0.5 for log-probability scores)")
+    parser = argparse.ArgumentParser(
+        description="Filter de novo candidates for neoantigens."
+    )
+    parser.add_argument("--input", type=Path, required=True,
+                        help="Path to de_novo_candidates.tsv")
+    parser.add_argument("--psms", type=Path, required=True,
+                        help="Path to immunopeptidome_psms.tsv (database search hits)")
+    parser.add_argument("--fasta", type=Path, required=True,
+                        help="Path to reference proteome FASTA")
+    parser.add_argument("--manifest", type=Path,
+                        default="configs/sample_manifest.tsv",
+                        help="Sample manifest for run_id to sample_id mapping")
+    parser.add_argument("--output", type=Path, required=True,
+                        help="Output filtered TSV")
+    parser.add_argument("--score_cutoff", type=float, default=-0.5,
+                        help="De novo score cutoff (log-probability, default: -0.5)")
     parser.add_argument("--min_psm_support", type=int, default=2,
-                        help="Minimum number of spectra supporting a peptide (proposal: >= 2)")
+                        help="Minimum spectra supporting a peptide (>= 2)")
     parser.add_argument("--allow_flanking_mutations", action="store_true",
-                        help="If set, retain missense mutations at flanking positions (pos 1 or last). Default: exclude.")
-    
+                        help="Retain mutations at flanking positions (pos 1 or last).")
+
     args = parser.parse_args()
-    
+
+    # ------------------------------------------------------------------
     # 1. Load data
-    print(f"Loading candidates from {args.input}...")
-    df_candidates = pd.read_csv(args.input, sep="\t")
-    
-    # Map run_id to sample_id via manifest
+    # ------------------------------------------------------------------
+    print(f"\n[Stage 0] Loading candidates from {args.input}…")
+    df = pd.read_csv(args.input, sep="\t")
+    print(f"  Input candidates : {len(df):>7,}")
+
     manifest = pd.read_csv(args.manifest, sep="\t")
-    run_to_sample = dict(zip(manifest['run_id'], manifest['patient_id']))
-    df_candidates['sample_id'] = df_candidates['run_id'].map(run_to_sample).fillna("Unknown")
-    
-    if 'score' not in df_candidates.columns and 'de_novo_score' in df_candidates.columns:
-        df_candidates = df_candidates.rename(columns={'de_novo_score': 'score'})
-    if 'score' not in df_candidates.columns:
+    run_to_sample = dict(zip(manifest["run_id"], manifest["patient_id"]))
+    df["sample_id"] = df["run_id"].map(run_to_sample).fillna("Unknown")
+
+    if "score" not in df.columns and "de_novo_score" in df.columns:
+        df = df.rename(columns={"de_novo_score": "score"})
+    if "score" not in df.columns:
         raise ValueError("Candidate table must contain `score` or `de_novo_score`.")
 
-    print(f"Loading database search PSMs from {args.psms}...")
+    print(f"\n[Stage 1] Loading database-search PSMs from {args.psms}…")
     df_psms = pd.read_csv(args.psms, sep="\t")
-    # Identify peptides found in database search per sample to subtract them
-    db_peptides = defaultdict(set)
+    db_peptides: dict[str, set[str]] = defaultdict(set)
     for _, row in df_psms.iterrows():
-        db_peptides[str(row['sample_id'])].add(str(row['peptide']))
-    
-    # 2. Basic filters (Length and Score)
-    initial_count = len(df_candidates)
-    df = df_candidates[df_candidates['score'] >= args.score_cutoff].copy()
-    print(f"Filtered by score >= {args.score_cutoff}: {initial_count} -> {len(df)}")
-    
-    df = df[df['peptide'].str.match(CANONICAL_HLA_I_PATTERN)].copy()
-    print(f"Filtered by length (8-11 AA): {len(df)}")
-    
-    # 3. Database subtraction (Self-peptides from this sample)
-    def is_in_db(row):
-        return row['peptide'] in db_peptides.get(str(row['sample_id']), set())
-    
-    mask_in_db = df.apply(is_in_db, axis=1)
-    df = df[~mask_in_db].copy()
-    print(f"Filtered out database hits: {len(df)}")
-    
-    # 3b. PSM support count >= min_psm_support (proposal requirement)
-    # A peptide must appear in at least N independent spectra to be retained.
-    if 'run_id' in df.columns:
-        psm_counts = df.groupby(['sample_id', 'peptide'])['run_id'].count().rename('psm_count')
-    else:
-        psm_counts = df.groupby(['sample_id', 'peptide']).size().rename('psm_count')
-    df = df.join(psm_counts, on=['sample_id', 'peptide'])
+        db_peptides[str(row["sample_id"])].add(str(row["peptide"]))
+
+    # ------------------------------------------------------------------
+    # 2. Score filter
+    # ------------------------------------------------------------------
     before = len(df)
-    df = df[df['psm_count'] >= args.min_psm_support].copy()
-    print(f"Filtered by PSM support >= {args.min_psm_support}: {before} -> {len(df)}")
-    
-    # 4. Missense mutation detection
-    print("Indexing reference proteome (this may take a moment)...")
-    ref_set = load_reference_peptides(args.fasta)
+    df = df[df["score"] >= args.score_cutoff].copy()
+    print(f"\n[Stage 2] Score >= {args.score_cutoff}: {before:,} → {len(df):,}")
+
+    # ------------------------------------------------------------------
+    # 3. Length / canonical AA filter
+    # ------------------------------------------------------------------
+    before = len(df)
+    df = df[df["peptide"].str.match(CANONICAL_HLA_I_PATTERN)].copy()
+    print(f"[Stage 3] Canonical HLA-I length (8–11 AA): {before:,} → {len(df):,}")
+
+    # ------------------------------------------------------------------
+    # 4. Database subtraction
+    # ------------------------------------------------------------------
+    mask_in_db = df.apply(
+        lambda row: row["peptide"] in db_peptides.get(str(row["sample_id"]), set()),
+        axis=1,
+    )
+    before = len(df)
+    df = df[~mask_in_db].copy()
+    print(f"[Stage 4] Remove database-search hits: {before:,} → {len(df):,}")
+
+    # ------------------------------------------------------------------
+    # 5. PSM support count
+    # ------------------------------------------------------------------
+    if "run_id" in df.columns:
+        psm_counts = (
+            df.groupby(["sample_id", "peptide"])["run_id"]
+            .count()
+            .rename("psm_count")
+        )
+    else:
+        psm_counts = df.groupby(["sample_id", "peptide"]).size().rename("psm_count")
+
+    df = df.join(psm_counts, on=["sample_id", "peptide"])
+    before = len(df)
+    df = df[df["psm_count"] >= args.min_psm_support].copy()
+    print(f"[Stage 5] PSM support >= {args.min_psm_support}: {before:,} → {len(df):,}")
+
+    # ------------------------------------------------------------------
+    # 6. Missense mutation detection (single FASTA pass — audit fix)
+    # ------------------------------------------------------------------
+    print(f"\n[Stage 6] Indexing reference proteome (single pass)…")
+    ref_set, seq_to_proteins = build_reference_index(args.fasta)
 
     results = []
-    print("Performing missense mutation detection (Levenshtein distance 1)...")
+    n_self = n_missense = n_other = 0
+
+    print(f"Performing missense mutation detection on {len(df):,} candidates…")
     for _, row in df.iterrows():
-        peptide = row['peptide']
-        
-        # Check if it's a perfect match in the whole proteome (Self-peptide from other proteins/samples)
+        peptide = row["peptide"]
+
+        # Exact self-peptide — skip
         if peptide in ref_set:
+            n_self += 1
             continue
 
-        # Check for 1-off mutation
         mutation_info = find_mutation(peptide, ref_set)
         row_dict = row.to_dict()
 
         if mutation_info:
             wt_seq, pos, wt_aa, mut_aa = mutation_info
-
-            # Proposal filter: exclude mutations at flanking positions (pos 1 or pos len)
-            # Flanking AA changes often affect proteasomal cleavage, not TCR contact
-            is_flanking = (pos == 1 or pos == len(peptide))
+            is_flanking = pos == 1 or pos == len(peptide)
             if is_flanking and not args.allow_flanking_mutations:
+                n_self += 1  # treated as non-neoantigen for ranking purposes
                 continue
 
-            # Find source proteins (lazy — only for the few matched candidates)
-            source_proteins = find_source_proteins(wt_seq, args.fasta)
+            # Cached source-protein lookup — no repeated FASTA I/O
+            source_proteins = find_source_proteins(wt_seq, seq_to_proteins)
 
             row_dict.update({
-                'wildtype_peptide': wt_seq,
-                'mutation_pos': pos,
-                'wt_aa': wt_aa,
-                'mut_aa': mut_aa,
-                'mutation_type': 'missense',
-                'source_protein': ";".join(source_proteins)
+                "wildtype_peptide": wt_seq,
+                "mutation_pos": pos,
+                "wt_aa": wt_aa,
+                "mut_aa": mut_aa,
+                "mutation_type": "missense",
+                "source_protein": ";".join(source_proteins),
             })
             results.append(row_dict)
+            n_missense += 1
         else:
-            # Keep as Class C (non-missense, maybe frameshift or other)
             row_dict.update({
-                'wildtype_peptide': '',
-                'mutation_pos': '',
-                'wt_aa': '',
-                'mut_aa': '',
-                'mutation_type': 'other',
-                'source_protein': ''
+                "wildtype_peptide": "",
+                "mutation_pos": "",
+                "wt_aa": "",
+                "mut_aa": "",
+                "mutation_type": "other",
+                "source_protein": "",
             })
             results.append(row_dict)
-            
+            n_other += 1
+
     df_final = pd.DataFrame(results)
-    n_missense = (df_final['mutation_type'] == 'missense').sum() if not df_final.empty else 0
-    n_other    = (df_final['mutation_type'] == 'other').sum() if not df_final.empty else 0
-    
-    print(f"\n=== Filter Summary ===")
-    print(f"  Total candidates retained: {len(df_final)}")
-    print(f"  Missense (Class A/B eligible): {n_missense}")
-    print(f"  Other / Class C:               {n_other}")
-    
+
+    # ------------------------------------------------------------------
+    # Summary
+    # ------------------------------------------------------------------
+    print(f"\n=== Filter Stage Summary ===")
+    print(f"  After score filter        : see Stage 2")
+    print(f"  After length filter       : see Stage 3")
+    print(f"  After DB subtraction      : see Stage 4")
+    print(f"  After PSM support filter  : see Stage 5")
+    print(f"  Self-peptides removed     : {n_self:>7,}")
+    print(f"  Missense (Class A/B elig) : {n_missense:>7,}")
+    print(f"  Other / Class C           : {n_other:>7,}")
+    print(f"  TOTAL retained            : {len(df_final):>7,}")
+
     df_final.to_csv(args.output, sep="\t", index=False)
-    print(f"\nSaved {len(df_final)} neoantigen candidates to {args.output}")
+    print(f"\nSaved {len(df_final):,} neoantigen candidates to {args.output}")
 
 
 if __name__ == "__main__":

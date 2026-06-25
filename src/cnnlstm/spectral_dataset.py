@@ -11,6 +11,16 @@ Audit fixes applied (2026-06-20):
   - Unknown amino acids (not in AA_TO_INT) now map to explicit UNK token (index 23)
     instead of collapsing silently into PAD (index 0).
   - Peptide truncation is logged with a warning when it occurs.
+
+Accuracy improvements applied (2026-06-25):
+  - Charge-normalized m/z deconvolution: when charge > 1 the protonated
+    fragment m/z values are scaled to the singly-charged equivalent
+    (mz_deconv = mz * charge - (charge-1) * 1.00728) before binning.
+    This collapses multiply-charged b/y ions to the same bin as their
+    singly-charged counterparts, reducing feature fragmentation.
+  - Rank-based intensity normalisation option (intensity_rank_norm=True):
+    replaces raw intensities with 1/rank, which is robust against extreme
+    outliers and makes the feature distribution more uniform across runs.
 """
 
 from __future__ import annotations
@@ -73,6 +83,14 @@ class SpectralDataset(Dataset):
         ``None`` disables peak filtering.
     intensity_transform:
         ``"log1p"`` (default), ``"sqrt"``, or ``"none"``.
+    charge_normalize:
+        When ``True``, multiply-charged fragment ions are deconvolved to
+        their singly-charged m/z before binning.  Requires a ``charge``
+        column in the PSM file (falls back silently when absent).
+    rank_norm:
+        When ``True``, replace intensities with 1/rank before binning.
+        Rank normalisation is more robust to outlier peaks than
+        absolute scaling alone.
     """
 
     def __init__(
@@ -84,6 +102,8 @@ class SpectralDataset(Dataset):
         max_seq_len: int = 30,
         top_n_peaks: int | None = 200,
         intensity_transform: str = "log1p",
+        charge_normalize: bool = False,
+        rank_norm: bool = False,
     ):
         super().__init__()
         self.bin_size = bin_size
@@ -92,6 +112,8 @@ class SpectralDataset(Dataset):
         self.max_seq_len = max_seq_len
         self.top_n_peaks = top_n_peaks
         self.intensity_transform = intensity_transform
+        self.charge_normalize = charge_normalize
+        self.rank_norm = rank_norm
 
         # --- Load PSMs ---
         logger.info("Loading PSMs from %s", psm_file)
@@ -161,8 +183,46 @@ class SpectralDataset(Dataset):
             return np.sqrt(np.maximum(values, 0.0))
         return values  # "none"
 
-    def _bin_spectrum(self, mz_array: list, int_array: list) -> torch.Tensor:
+    @staticmethod
+    def _deconvolve_mz(
+        mz_array: list, int_array: list, charge: int
+    ) -> tuple[list, list]:
+        """Deconvolve multiply-charged ions to singly-charged m/z.
+
+        Only peaks whose deconvolved m/z falls within [0, max_mz) are kept.
+        Singly-charged peaks (charge=1) are returned unchanged.
+        """
+        if charge <= 1:
+            return mz_array, int_array
+        proton = 1.007276
+        out_mz, out_int = [], []
+        for mz, intensity in zip(mz_array, int_array):
+            deconv = mz * charge - (charge - 1) * proton
+            out_mz.append(deconv)
+            out_int.append(intensity)
+        return out_mz, out_int
+
+    @staticmethod
+    def _rank_normalise(int_array: list) -> list:
+        """Replace intensities with 1/rank (highest intensity → rank 1)."""
+        if not int_array:
+            return int_array
+        order = sorted(range(len(int_array)), key=lambda i: int_array[i], reverse=True)
+        rank_int = [0.0] * len(int_array)
+        for rank, idx in enumerate(order, 1):
+            rank_int[idx] = 1.0 / rank
+        return rank_int
+
+    def _bin_spectrum(
+        self, mz_array: list, int_array: list, charge: int = 1
+    ) -> torch.Tensor:
         mz_array, int_array = self._apply_top_n_filter(mz_array, int_array)
+
+        if self.charge_normalize and charge > 1:
+            mz_array, int_array = self._deconvolve_mz(mz_array, int_array, charge)
+
+        if self.rank_norm:
+            int_array = self._rank_normalise(int_array)
 
         vector = np.zeros(self.vector_size, dtype=np.float32)
         for mz, intensity in zip(mz_array, int_array):
@@ -272,7 +332,18 @@ class SpectralDataset(Dataset):
 
         mz_array = spectrum.get("m/z array", [])
         int_array = spectrum.get("intensity array", [])
-        x = self._bin_spectrum(mz_array, int_array)
+
+        # Read per-spectrum charge if available
+        charge = 1
+        if self.charge_normalize:
+            row_charge = row.get("charge", None)
+            if row_charge is not None:
+                try:
+                    charge = int(row_charge)
+                except (ValueError, TypeError):
+                    pass
+
+        x = self._bin_spectrum(mz_array, int_array, charge=charge)
         y = self._encode_sequence(peptide)
         return x, y
 
@@ -286,4 +357,6 @@ class SpectralDataset(Dataset):
             "truncation_count": self._truncation_count,
             "intensity_transform": self.intensity_transform,
             "top_n_peaks": self.top_n_peaks,
+            "charge_normalize": self.charge_normalize,
+            "rank_norm": self.rank_norm,
         }

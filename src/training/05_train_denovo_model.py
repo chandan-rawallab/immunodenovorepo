@@ -168,11 +168,12 @@ def train_production(
     epochs: int = 150,
     lr: float = 3e-4,
     num_workers: int = 4,
-    t0: int = 10,              # CosineAnnealingWarmRestarts: first restart period
-    t_mult: int = 2,           # T_mult for warm-restart schedule
+    t0: int = 10,
+    t_mult: int = 2,
     label_smoothing: float = 0.10,
     patience: int = 25,
     grad_accum_steps: int = 2,
+    dry_run: bool = False,          # CPU sanity-check mode: 2 epochs, 64 samples
 ):
     # ── 1. Configuration ─────────────────────────────────────────────────────
     WORKSPACE_ROOT = os.path.dirname(PROJECT_ROOT)
@@ -189,6 +190,23 @@ def train_production(
     DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     USE_AMP = DEVICE.type == "cuda"
     scaler = torch.amp.GradScaler(enabled=USE_AMP)
+
+    if dry_run:
+        logger.warning(
+            "DRY-RUN mode: capping to 2 epochs, 64 samples, batch_size=8, "
+            "num_workers=0. This is for pipeline verification only, NOT real training."
+        )
+        epochs = 2
+        batch_size = 8
+        num_workers = 0
+    elif DEVICE.type == "cpu":
+        logger.warning(
+            "No CUDA GPU detected — training on CPU. "
+            "Full training will be extremely slow. "
+            "Use --dry-run to do a quick pipeline check, or run on Google Colab "
+            "(see notebooks/colab_train.ipynb) for GPU-accelerated training."
+        )
+        num_workers = 0  # multiprocessing on CPU can deadlock
 
     config = {
         "batch_size": batch_size,
@@ -229,6 +247,13 @@ def train_production(
     train_dataset = Subset(full_dataset, train_idx)
     val_dataset   = Subset(full_dataset, val_idx)
     test_dataset  = Subset(full_dataset, test_idx)  # noqa: F841
+
+    # Dry-run: cap to first 64 samples only
+    if dry_run:
+        from torch.utils.data import Subset as _Sub
+        cap = min(64, len(train_idx))
+        train_dataset = _Sub(full_dataset, train_idx[:cap])
+        val_dataset   = _Sub(full_dataset, val_idx[:min(16, len(val_idx))])
 
     # Persist test set for locked evaluation
     test_psms = full_dataset.psms.iloc[test_idx]
@@ -451,6 +476,8 @@ if __name__ == "__main__":
     parser.add_argument("--patience",        type=int,   default=25)
     parser.add_argument("--grad-accum",      type=int,   default=2,
                         help="Gradient accumulation steps (effective batch = batch-size × grad-accum).")
+    parser.add_argument("--dry-run",         action="store_true", default=False,
+                        help="CPU pipeline check: 2 epochs, 64 samples. No GPU needed.")
     args = parser.parse_args()
 
     train_production(
@@ -466,4 +493,5 @@ if __name__ == "__main__":
         label_smoothing=args.label_smoothing,
         patience=args.patience,
         grad_accum_steps=args.grad_accum,
+        dry_run=args.dry_run,
     )

@@ -360,3 +360,64 @@ class SpectralDataset(Dataset):
             "charge_normalize": self.charge_normalize,
             "rank_norm": self.rank_norm,
         }
+
+
+# ---------------------------------------------------------------------------
+# Module-level convenience wrapper — import this in eval/inference scripts
+# to guarantee identical preprocessing to training.
+# ---------------------------------------------------------------------------
+
+def bin_spectrum_shared(
+    mz_array: list,
+    intensity_array: list,
+    bin_size: float = 0.1,
+    max_mz: float = 2000.0,
+    top_n: int = 200,
+    transform: str = "log1p",
+    charge: int = 1,
+    charge_normalize: bool = False,
+    rank_norm: bool = False,
+) -> torch.Tensor:
+    """Exact equivalent of SpectralDataset._bin_spectrum for use outside the Dataset.
+
+    Import and call this function in evaluation and inference scripts so that
+    the preprocessing path is identical to training — preventing eval drift.
+
+    Parameters mirror SpectralDataset constructor defaults.
+    """
+    # 1. Top-N peak filter
+    if top_n is not None and len(mz_array) > top_n:
+        pairs = sorted(zip(intensity_array, mz_array), reverse=True)[:top_n]
+        intensity_array, mz_array = map(list, zip(*pairs))
+
+    # 2. Charge-normalized deconvolution
+    if charge_normalize and charge > 1:
+        mz_array, intensity_array = SpectralDataset._deconvolve_mz(
+            mz_array, intensity_array, charge
+        )
+
+    # 3. Rank normalisation
+    if rank_norm:
+        intensity_array = SpectralDataset._rank_normalise(intensity_array)
+
+    # 4. Bin into fixed vector
+    vector_size = int(max_mz / bin_size)
+    vector = np.zeros(vector_size, dtype=np.float32)
+    for mz, intensity in zip(mz_array, intensity_array):
+        if 0 <= mz < max_mz:
+            idx = int(mz / bin_size)
+            if idx < vector_size:
+                vector[idx] += intensity
+
+    # 5. Intensity transform
+    if transform == "log1p":
+        vector = np.log1p(vector)
+    elif transform == "sqrt":
+        vector = np.sqrt(np.maximum(vector, 0.0))
+
+    # 6. L-inf normalise
+    max_val = vector.max()
+    if max_val > 0:
+        vector /= max_val
+
+    return torch.tensor(vector).unsqueeze(0)  # (1, vector_size)

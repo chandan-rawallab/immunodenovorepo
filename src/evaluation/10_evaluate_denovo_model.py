@@ -42,7 +42,8 @@ from cnnlstm.spectral_dataset import (
     AA_TO_INT,
     AMINO_ACIDS,
     VOCAB_SIZE,
-    SpectralDataset,  # imported to call audit_summary via shared preprocessing
+    SpectralDataset,
+    bin_spectrum_shared,   # ← canonical preprocessing; prevents eval drift
 )
 
 INT_TO_AA: dict[int, str] = {v: k for k, v in AA_TO_INT.items()}
@@ -57,51 +58,8 @@ _TOP_N_PEAKS_DEFAULT = 200
 _TRANSFORM_DEFAULT   = "log1p"
 
 
-# ---------------------------------------------------------------------------
-# Shared preprocessing (mirrors SpectralDataset — audit fix for eval drift)
-# ---------------------------------------------------------------------------
-
-def _apply_top_n(mz_array, int_array, top_n: int):
-    if top_n is None or len(mz_array) <= top_n:
-        return mz_array, int_array
-    pairs = sorted(zip(int_array, mz_array), reverse=True)[:top_n]
-    intensities, mzs = zip(*pairs)
-    return list(mzs), list(intensities)
-
-
-def _transform_intensity(values: np.ndarray, method: str) -> np.ndarray:
-    if method == "log1p":
-        return np.log1p(values)
-    if method == "sqrt":
-        return np.sqrt(np.maximum(values, 0.0))
-    return values
-
-
-def bin_spectrum(
-    mz_array,
-    intensity_array,
-    bin_size: float,
-    max_mz: float,
-    top_n: int = _TOP_N_PEAKS_DEFAULT,
-    transform: str = _TRANSFORM_DEFAULT,
-) -> torch.Tensor:
-    """Exact mirror of SpectralDataset._bin_spectrum for evaluation consistency."""
-    mz_array, intensity_array = _apply_top_n(mz_array, intensity_array, top_n)
-
-    vector_size = int(max_mz / bin_size)
-    vector = np.zeros(vector_size, dtype=np.float32)
-    for mz, intensity in zip(mz_array, intensity_array):
-        if mz < max_mz:
-            idx = int(mz / bin_size)
-            if idx < vector_size:
-                vector[idx] += intensity
-
-    vector = _transform_intensity(vector, transform)
-    max_val = vector.max()
-    if max_val > 0:
-        vector /= max_val
-
-    return torch.tensor(vector).unsqueeze(0)  # (1, vector_size)
+# NOTE: bin_spectrum_shared() is now imported from spectral_dataset to
+# guarantee training/evaluation preprocessing parity.
 
 
 # ---------------------------------------------------------------------------
@@ -293,11 +251,15 @@ def main() -> int:
     parser.add_argument("--bin-size",   type=float, default=_BIN_SIZE_DEFAULT)
     parser.add_argument("--max-mz",     type=float, default=_MAX_MZ_DEFAULT)
     parser.add_argument("--max-seq-len",type=int,   default=30)
-    parser.add_argument("--top-n-peaks",type=int,   default=_TOP_N_PEAKS_DEFAULT)
-    parser.add_argument("--transform",  choices=["log1p", "sqrt", "none"],
+    parser.add_argument("--top-n-peaks",     type=int,   default=_TOP_N_PEAKS_DEFAULT)
+    parser.add_argument("--transform",        choices=["log1p", "sqrt", "none"],
                         default=_TRANSFORM_DEFAULT)
-    parser.add_argument("--device",     default="cpu")
-    parser.add_argument("--max-runs",   type=int, default=None)
+    parser.add_argument("--charge-normalize", action="store_true", default=False,
+                        help="Apply charge-normalized m/z deconvolution (match training flag).")
+    parser.add_argument("--rank-norm",        action="store_true", default=False,
+                        help="Apply rank-based intensity normalisation (match training flag).")
+    parser.add_argument("--device",           default="cpu")
+    parser.add_argument("--max-runs",         type=int, default=None)
     args = parser.parse_args()
 
     if not args.checkpoint.exists():
@@ -409,13 +371,15 @@ def main() -> int:
 
             found += 1
             batch_x.append(
-                bin_spectrum(
+                bin_spectrum_shared(
                     spectrum.get("m/z array", []),
                     spectrum.get("intensity array", []),
-                    args.bin_size,
-                    args.max_mz,
+                    bin_size=args.bin_size,
+                    max_mz=args.max_mz,
                     top_n=args.top_n_peaks,
                     transform=args.transform,
+                    charge_normalize=args.charge_normalize,
+                    rank_norm=args.rank_norm,
                 )
             )
             batch_y.append(encode_sequence(peptide, args.max_seq_len))

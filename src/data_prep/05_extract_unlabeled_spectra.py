@@ -17,7 +17,7 @@ except ImportError:
     print("ERROR: pyteomics is required to write MGF files.")
     sys.exit(1)
 
-def extract_unlabeled(mgf_dir, psm_file, output_dir, manifest_file=None, clean_output=False):
+def extract_unlabeled(mgf_dir, psm_file, output_dir, manifest_file=None, clean_output=False, force=False):
     """
     Reads all MGF files, filters out labelled spectra found in psm_file, 
     and writes the unlabeled spectra to new MGF files in output_dir.
@@ -72,6 +72,11 @@ def extract_unlabeled(mgf_dir, psm_file, output_dir, manifest_file=None, clean_o
         run_id = os.path.basename(mgf_path).replace(".mgf", "")
         out_mgf_path = os.path.join(output_dir, f"{run_id}_unlabeled.mgf")
         
+        if os.path.exists(out_mgf_path) and not force:
+            # We print using tqdm.write to avoid interfering with progress bar
+            tqdm.write(f"Skipping {run_id}: unlabeled MGF already exists. Use --force to overwrite.")
+            continue
+            
         # We can stream reading and writing to avoid loading the whole MGF in memory
         try:
             reader = mgf.read(mgf_path)
@@ -124,6 +129,8 @@ if __name__ == "__main__":
                         help="Path to sample manifest file to filter run_ids")
     parser.add_argument("--clean-output", action="store_true",
                         help="Remove stale *_unlabeled.mgf files whose run_id is not in the manifest")
+    parser.add_argument("--force", action="store_true",
+                        help="Overwrite unlabeled MGF files if they already exist")
     
     args = parser.parse_args()
-    extract_unlabeled(args.mgf_dir, args.psms, args.output_dir, args.manifest, args.clean_output)
+    extract_unlabeled(args.mgf_dir, args.psms, args.output_dir, args.manifest, args.clean_output, args.force)

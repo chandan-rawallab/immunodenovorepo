@@ -4,7 +4,7 @@ import glob
 from tqdm import tqdm
 import argparse
 
-def extract_psms(input_dir, output_file, manifest_file):
+def extract_psms(input_dir, output_file, manifest_file, force=False):
     """
     Extracts PSMs from MaxQuant msms.txt files and formats them for Objective 3 training.
     
@@ -12,7 +12,12 @@ def extract_psms(input_dir, output_file, manifest_file):
         input_dir: Directory containing MaxQuant msms.txt files (e.g. data/psms)
         output_file: Path to save the extracted PSMs (e.g. results/immunopeptidome_psms.tsv)
         manifest_file: Path to sample manifest to map filenames to patient_ids
+        force: Overwrite output file if it exists
     """
+    if os.path.exists(output_file) and not force:
+        print(f"Output file {output_file} already exists. Skipping extraction. Use --force to overwrite.")
+        return
+
     if not os.path.exists(manifest_file):
         print(f"ERROR: Manifest file {manifest_file} not found.")
         return
@@ -109,7 +114,8 @@ if __name__ == "__main__":
     parser.add_argument("--input-dir", default="data/psms", help="Directory with MaxQuant msms.txt files")
     parser.add_argument("--output-file", default="results/immunopeptidome_psms.tsv", help="Output path")
     parser.add_argument("--manifest", default="configs/sample_manifest.tsv", help="Sample manifest path")
+    parser.add_argument("--force", action="store_true", help="Overwrite output file if it exists")
     
     args = parser.parse_args()
     
-    extract_psms(args.input_dir, args.output_file, args.manifest)
+    extract_psms(args.input_dir, args.output_file, args.manifest, args.force)

@@ -20,7 +20,7 @@ def run_linker(tmp_path: Path, extra_args: list[str] | None = None) -> pd.DataFr
         encoding="utf-8",
     )
     manifest.write_text(
-        """study_id	run_id	patient_id	validation_id	filename	cohort	sample_role	hla_alleles	hla_source	rna_expr_path	rna_source	raw_source	psm_source	include_in_pipeline	notes\nSTUDY1	RUN1	P1	P1	msms_RUN1.raw.txt	STUDY1	hla_peptidome	HLA-A*02:01	manual			local_raw	local_psm	True	\n"""
+        """study_id	run_id	patient_id	validation_id	filename	cohort	sample_role	hla_alleles	hla_source	rna_expr_path	rna_source	raw_source	psm_source	include_in_pipeline	notes\nSTUDY1	RUN1	P1	P1	msms_RUN1.raw.txt	STUDY1	hla_peptidome	HLA-A*02:01	manual			local_raw	local_psm	True	\n""",
         encoding="utf-8",
     )
 

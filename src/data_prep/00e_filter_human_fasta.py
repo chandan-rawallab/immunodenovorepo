@@ -13,7 +13,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Filter a FASTA to Homo sapiens entries only.")
     parser.add_argument("--input", type=Path, default=Path("data/reference/uniprot_human_reviewed.fasta"))
     parser.add_argument("--output", type=Path, default=Path("data/reference/uniprot_human_reviewed.only_human.fasta"))
+    parser.add_argument("--force", action="store_true", help="Force overwrite output file if it exists")
     args = parser.parse_args()
+
+    if args.output.exists() and not args.force:
+        print(f"Output file {args.output} already exists. Skipping filtering. Use --force to overwrite.")
+        return 0
 
     if not args.input.exists():
         print(f"ERROR: input FASTA not found: {args.input}")

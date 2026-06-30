@@ -351,6 +351,7 @@ def main():
         if rna_frames and "source_protein" in df_ranked.columns:
             # Explode multi-protein annotations into one row per protein ID
             all_rna = pd.concat(rna_frames, ignore_index=True)
+            df_ranked["_candidate_row_id"] = range(len(df_ranked))
 
             df_ranked = df_ranked.merge(
                 patient_rna[["patient_id", "rna_expr_path"]],
@@ -373,13 +374,22 @@ def main():
 
             # Aggregate: max TPM per original candidate row
             tpm_max = (
-                df_exploded.groupby(df_exploded.index)["expression_tpm"]
+                df_exploded.groupby("_candidate_row_id")["expression_tpm"]
                 .max()
                 .rename("expression_tpm_joined")
             )
-            df_ranked = df_ranked.join(tpm_max)
+            df_ranked = df_ranked.merge(
+                tpm_max,
+                left_on="_candidate_row_id",
+                right_index=True,
+                how="left",
+            )
             df_ranked["expression_tpm"] = df_ranked["expression_tpm_joined"].fillna(0.0)
-            df_ranked.drop(columns=["expression_tpm_joined", "_source_ids"], errors="ignore", inplace=True)
+            df_ranked.drop(
+                columns=["expression_tpm_joined", "_source_ids", "_candidate_row_id"],
+                errors="ignore",
+                inplace=True,
+            )
 
             # Clean up duplicate columns from merge
             if "patient_id_manifest" in df_ranked.columns:
@@ -387,7 +397,7 @@ def main():
 
     # RNA source evidence gating
     if "rna_source" not in df_ranked.columns:
-        if {"sample_id", "patient_id", "rna_source"}.issubset(manifest.columns):
+        if {"patient_id", "rna_source"}.issubset(manifest.columns):
             patient_sources = manifest[["patient_id", "rna_source"]].drop_duplicates("patient_id")
             df_ranked = df_ranked.merge(
                 patient_sources, left_on="sample_id", right_on="patient_id", how="left"
